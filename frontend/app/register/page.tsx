@@ -494,7 +494,6 @@ export default function RegisterPage() {
                         accept="image/*"
                         onChange={handleIdFile}
                         className="hidden"
-                        required
                       />
                       <span className="btn-gold text-xs py-2 block text-center cursor-pointer border border-gold bg-gold/10 hover:bg-gold/20">
                         {idPreview ? "Change ID Photo" : "Upload ID Photo"}
