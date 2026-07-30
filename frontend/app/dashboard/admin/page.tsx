@@ -65,13 +65,12 @@ export default function AdminPage() {
   }
 
   async function assignCaptain(sportId: string, uniqueId: string) {
-    // Look up the user by uniqueId isn't exposed as an endpoint yet — for now
-    // this expects the internal userId. Extend /api/users with a lookup-by-uniqueId
-    // route if you want to type the college ID directly here.
+    // This now accepts the public athlete uniqueId (KS000001) rather than the
+    // internal database UUID. The backend resolves it to the actual user id.
     try {
       await api(`/api/sports/${sportId}/captain`, {
         method: "POST",
-        body: JSON.stringify({ userId: uniqueId }),
+        body: JSON.stringify({ uniqueId }),
       });
       await load();
     } catch (err: any) {
@@ -130,18 +129,18 @@ export default function AdminPage() {
   );
 }
 
-function AssignCaptainForm({ sportId, onAssign }: { sportId: string; onAssign: (sportId: string, userId: string) => void }) {
-  const [userId, setUserId] = useState("");
+function AssignCaptainForm({ sportId, onAssign }: { sportId: string; onAssign: (sportId: string, uniqueId: string) => void }) {
+  const [uniqueId, setUniqueId] = useState("");
   return (
     <div className="flex gap-2">
       <input
         className="input-field text-xs"
-        placeholder="Internal user ID"
-        value={userId}
-        onChange={(e) => setUserId(e.target.value)}
+        placeholder="Athlete ID (e.g. KS000001)"
+        value={uniqueId}
+        onChange={(e) => setUniqueId(e.target.value)}
       />
       <button
-        onClick={() => userId && onAssign(sportId, userId)}
+        onClick={() => uniqueId && onAssign(sportId, uniqueId)}
         className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
       >
         Assign captain
