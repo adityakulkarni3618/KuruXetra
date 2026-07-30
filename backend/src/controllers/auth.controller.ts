@@ -35,14 +35,14 @@ export async function register(req: AuthedRequest, res: Response) {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
   }
-  const { preferredSports, ...data } = parsed.data;
+  const { preferredSports, password, ...data } = parsed.data;
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ username: data.username }, { email: data.email }] },
   });
   if (existing) return res.status(409).json({ error: "Username or email already registered" });
 
-  const passwordHash = await bcrypt.hash(data.password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
   const uniqueId = await generateUniqueId();
   const isFirstUser = (await prisma.user.count()) === 0;
 
