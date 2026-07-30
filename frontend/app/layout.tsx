@@ -1,0 +1,18 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
+
+export const metadata: Metadata = {
+  title: "Kuruxetra | Sports Management System",
+  description: "The digital ground register for our college.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className="dark">
+      <body className="font-body min-h-screen bg-ink">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  );
+}
