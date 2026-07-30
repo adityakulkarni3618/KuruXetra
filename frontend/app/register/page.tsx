@@ -56,7 +56,7 @@ export default function RegisterPage() {
 
   // Load sports dynamically
   useEffect(() => {
-    api("/api/sports")
+    api("/api/sports", { auth: false })
       .then((data) => {
         if (Array.isArray(data)) setSportsList(data);
         setBackendDown(false);
