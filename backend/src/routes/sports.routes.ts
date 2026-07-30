@@ -7,7 +7,7 @@ import {
 } from "../controllers/sports.controller";
 
 const router = Router();
-router.get("/", requireAuth, listSports);
+router.get("/", listSports);
 router.post("/", requireAuth, requireRole("SUPER_ADMIN"), createSport);
 router.patch("/:id", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), updateSport);
 router.delete("/:id", requireAuth, requireRole("SUPER_ADMIN"), deleteSport);
