@@ -42,9 +42,11 @@ export default function RegisterPage() {
   const [sportsList, setSportsList] = useState<any[]>([]);
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   
-  // File upload previews
+  // File upload previews and files
   const [profilePreview, setProfilePreview] = useState<string>("");
+  const [profileFile, setProfileFile] = useState<File | null>(null);
   const [idPreview, setIdPreview] = useState<string>("");
+  const [idFile, setIdFile] = useState<File | null>(null);
 
   const [error, setError] = useState("");
   const [backendDown, setBackendDown] = useState(false);
@@ -78,20 +80,43 @@ export default function RegisterPage() {
   const handleProfileFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setProfileFile(file);
       const url = URL.createObjectURL(file);
       setProfilePreview(url);
-      update("profilePhotoUrl", `/uploads/profile_${Date.now()}_${file.name}`);
     }
   };
 
   const handleIdFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIdFile(file);
       const url = URL.createObjectURL(file);
       setIdPreview(url);
-      update("studentIdCardUrl", `/uploads/id_${Date.now()}_${file.name}`);
     }
   };
+
+  // Cloudinary direct unsigned upload helper
+  async function uploadToCloudinary(file: File): Promise<string> {
+    const cloudName = "rw3wmwga";
+    const uploadPreset = "ksms_uploads";
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error?.message || "Image upload failed");
+    }
+
+    const data = await res.json();
+    return data.secure_url;
+  }
 
   // Basic step validation
   function validateStep(currentStep: number) {
@@ -120,7 +145,7 @@ export default function RegisterPage() {
         return false;
       }
     } else if (currentStep === 4) {
-      if (!form.studentIdCardUrl) {
+      if (!idFile) {
         setError("Please upload a photo of your Student ID Card.");
         return false;
       }
@@ -147,8 +172,20 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      let profilePhotoUrl = "";
+      let studentIdCardUrl = "";
+
+      // Upload profile image if available
+      if (profileFile) {
+        profilePhotoUrl = await uploadToCloudinary(profileFile);
+      }
+
+      // Upload ID image (validated presence)
+      if (idFile) {
+        studentIdCardUrl = await uploadToCloudinary(idFile);
+      }
+
       const { confirmPassword, ...payload } = form;
-      // Auto-populate collegeId using the rollNumber as requested to satisfy database constraints
       const collegeId = form.rollNumber;
       
       const res = await api("/api/auth/register", {
@@ -157,6 +194,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...payload,
           collegeId,
+          profilePhotoUrl,
+          studentIdCardUrl,
           preferredSports: selectedSports,
         }),
       });
