@@ -71,7 +71,7 @@ A sports management and attendance system with training logs, leaderboards, role
 cd backend
 npm install
 cp .env.example .env
-# update .env with DATABASE_URL, JWT_SECRET, and optionally CORS_ORIGIN
+# update .env with DATABASE_URL, DIRECT_URL, JWT_SECRET, CORS_ORIGIN, and Cloudinary values
 npx prisma generate
 npx prisma migrate dev --name init
 npx prisma db seed
