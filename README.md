@@ -1,88 +1,112 @@
 # Kuruxetra Sports Management System (KSMS) — v1
 
-Digital replacement for the ground attendance register, plus Strava-style
-training tracking, leaderboards, and role-based sports management.
+A sports management and attendance system with training logs, leaderboards, role-based access, and season-aware tracking.
 
 ## Stack
 - **Backend**: Node.js, Express, TypeScript, PostgreSQL, Prisma, JWT auth
-- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS, Recharts
 
-## What's implemented in v1
-- Registration (collects all the fields from the spec) → pending approval → Sports Secretary approval → login
-- Auto-generated unique IDs (KS000001, KS000002, ...)
-- Roles: Super Admin (Sports Secretary), Captain, Student Athlete, Fitness Member
-- Sports: create/edit/archive (Super Admin), assign captain, join requests + approval
-- Attendance: self check-in/out, captain can mark manually, per-sport attendance view
-- Workouts and Running logs (auto pace calculation), Strava-style manual entry
-- Points ledger (auto-awarded on attendance/workout/run) and leaderboard (global + per-sport)
-- Season model in the schema, ready for your "sports seasons" idea (2026-27 etc.) —
-  not yet wired into the UI, but every record already has an optional `seasonId`.
+## Project structure
+- `/backend`
+  - `src/index.ts`: Express server entrypoint, API routing, health check, CORS, JSON parsing.
+  - `src/routes/`: Auth, sports, attendance, workouts, running, leaderboard, users, admin.
+  - `prisma/schema.prisma`: Database models and relations.
+  - `prisma/seed.ts`: Seed data for Super Admin and demo sports.
+  - `package.json`: Scripts for development, build, start, Prisma migrate/generate/seed.
+- `/frontend`
+  - `app/`: Next.js App Router with login, register, dashboard, and nested dashboard views.
+  - `components/`: Shared UI components.
+  - `lib/`: Client helpers and auth context.
+  - `package.json`: Scripts for dev, build, start, lint.
 
-## What's NOT built yet (intentionally, to ship the core first)
-Badges/achievements, challenges, events & matches, notifications, GPS tracking,
-file uploads (profile photo / ID card — the API accepts a URL string for now,
-pair it with Cloudinary or S3 later), announcements, analytics/reports/exports,
-gamification (XP/coins/season pass). The database schema and route structure
-are built so these slot in without breaking existing data.
+## Core features
+- Registration, approval workflow, and login
+- Role-based access: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER`
+- Sport management with join requests and captain assignment
+- Attendance tracking, self-check-in/out, and captain-marked attendance
+- Workout logging and running log entries with pace/speed metrics
+- Leaderboard and points ledger tracking user activity
+- Season-aware data model ready for future season selection and reporting
 
----
+## Backend API routes
+- `POST /api/auth/*`
+- `GET/POST /api/sports/*`
+- `GET/POST /api/attendance/*`
+- `GET/POST /api/workouts/*`
+- `GET/POST /api/running/*`
+- `GET /api/leaderboard/*`
+- `GET/POST /api/users/*`
+- `GET/POST /api/admin/*`
 
-## 1. Backend setup
+## Frontend routes
+- `/`: Landing page
+- `/login`: Login page
+- `/register`: Registration page
+- `/dashboard`: Dashboard home
+- `/dashboard/admin`: Admin dashboard
+- `/dashboard/attendance`: Attendance view
+- `/dashboard/captain`: Captain area
+- `/dashboard/leaderboard`: Leaderboard
+- `/dashboard/running`: Running log view
+- `/dashboard/sports`: Sports management view
+- `/dashboard/workouts`: Workout log view
 
+## Prisma schema summary
+- `Role`: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER`
+- `UserStatus`: `PENDING_APPROVAL`, `ACTIVE`, `SUSPENDED`
+- `MembershipStatus`: `PENDING`, `APPROVED`, `REJECTED`, `REMOVED`
+- `Season`: Used for time-bound competition periods and optional season-linked activity data
+- `User`: Stores identity, academic details, contact, role/status, and related activity
+- `Sport`: Sport metadata, captain relation, capacity, and status
+- `Membership`: Links users to sports with approval status
+- `Attendance`: Check-in/out logs, sport, season, and marked-by data
+- `Workout`: Exercise entries with sets, reps, weight, duration, and calories
+- `RunningLog`: Distance, duration, pace, speed, calories, notes
+- `PointsLedger`: Append-only points history for leaderboard calculations
+
+## Running locally
+
+### Backend
 ```bash
 cd backend
-cp .env.example .env
-# edit .env: set DATABASE_URL to your Postgres instance, and a real JWT_SECRET
-
 npm install
-npx prisma migrate dev --name init   # creates tables
-npx prisma db seed                    # creates Super Admin (ss_admin / Admin@123) + demo sports
-npm run dev                           # http://localhost:4000
+cp .env.example .env
+# update .env with DATABASE_URL, JWT_SECRET, and optionally CORS_ORIGIN
+npx prisma generate
+npx prisma migrate dev --name init
+npx prisma db seed
+npm run dev
 ```
 
-> Note: `prisma generate` needs to reach `binaries.prisma.sh` to download the
-> query engine. That domain wasn't reachable in the sandbox this was built in,
-> so the Prisma client itself hasn't been generated/verified end-to-end yet —
-> run `npx prisma generate` as your first step locally (it works on a normal
-> machine with internet access) before `migrate dev`.
+The backend starts on `http://localhost:4000` by default.
 
-You'll need a running PostgreSQL instance. Easiest local option:
-```bash
-docker run --name ksms-db -e POSTGRES_USER=ksms_user -e POSTGRES_PASSWORD=ksms_pass \
-  -e POSTGRES_DB=ksms -p 5432:5432 -d postgres:16
-```
-
-## 2. Frontend setup
-
+### Frontend
 ```bash
 cd frontend
 npm install
 echo "NEXT_PUBLIC_API_URL=http://localhost:4000" > .env.local
-npm run dev   # http://localhost:3000
+npm run dev
 ```
 
-## 3. First login
+The frontend starts on `http://localhost:3000`.
 
-The seed script creates:
-- **Super Admin**: username `ss_admin`, password `Admin@123`
-- 7 demo sports (Kho-Kho, Kabaddi, Cricket, Football, Volleyball, Badminton, Table Tennis)
+### Local Postgres
+```bash
+docker run --name ksms-db -e POSTGRES_USER=ksms_user -e POSTGRES_PASSWORD=ksms_pass -e POSTGRES_DB=ksms -p 5432:5432 -d postgres:16
+```
 
-Log in as `ss_admin`, go to **Admin**, approve any students who register,
-and assign captains (currently by internal user ID — visible via
-`GET /api/users` — a friendlier lookup-by-college-ID UI is a good next step).
+## Seeded demo data
+- Super Admin: `ss_admin` / `Admin@123`
+- Demo sports: Kho-Kho, Kabaddi, Cricket, Football, Volleyball, Badminton, Table Tennis
 
-## Suggested next steps, roughly in priority order
-1. Add a `GET /api/users?search=` endpoint + dropdown so admins can assign
-   captains by name instead of pasting an internal ID.
-2. Wire the `Season` model into the UI (a season switcher + "current season" badge).
-3. Cloudinary upload for profile photos and student ID cards.
-4. Badges + challenges (schema pattern: same append-only ledger style as `PointsLedger`).
-5. Events/matches module, then announcements.
-6. Docker Compose for one-command deploy (Postgres + backend + frontend) once
-   you're happy with the core flows.
+## Notes
+- `backend` uses `tsx watch` for local TypeScript execution.
+- CORS defaults to `http://localhost:3000` if `CORS_ORIGIN` is unset.
+- `Season` exists in the schema, but the UI does not yet expose season switching.
 
-## Deploying to kuruxetra.com
-- Frontend: Vercel (native Next.js support) — point `NEXT_PUBLIC_API_URL` at your backend's URL.
-- Backend: Railway, Render, or a small VPS + PM2/Docker, with a managed Postgres
-  (Railway/Neon/Supabase all work well with Prisma).
-- Point `kuruxetra.com` at the frontend, `api.kuruxetra.com` at the backend, set `CORS_ORIGIN` accordingly.
+## Next improvements
+1. Add user search for captain assignment instead of internal IDs
+2. Expose active season selection in the UI
+3. Add profile/photo uploads and documents
+4. Add badges, challenges, events/matches, announcements
+5. Add Docker Compose for full local stack startup

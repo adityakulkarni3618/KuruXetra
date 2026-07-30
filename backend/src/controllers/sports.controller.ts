@@ -52,10 +52,20 @@ export async function deleteSport(req: AuthedRequest, res: Response) {
 
 export async function assignCaptain(req: AuthedRequest, res: Response) {
   const { id } = req.params;
-  const { userId } = req.body as { userId: string };
+  const { uniqueId, userId } = req.body as { uniqueId?: string; userId?: string };
 
-  const sport = await prisma.sport.update({ where: { id }, data: { captainId: userId } });
-  await prisma.user.update({ where: { id: userId }, data: { role: "CAPTAIN" } });
+  const user = uniqueId
+    ? await prisma.user.findUnique({ where: { uniqueId } })
+    : userId
+    ? await prisma.user.findUnique({ where: { id: userId } })
+    : null;
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const sport = await prisma.sport.update({ where: { id }, data: { captainId: user.id } });
+  await prisma.user.update({ where: { id: user.id }, data: { role: "CAPTAIN" } });
   res.json(sport);
 }
 
