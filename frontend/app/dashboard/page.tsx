@@ -27,7 +27,7 @@ export default function OverviewPage() {
       <h1 className="font-display text-2xl font-bold mb-1">Welcome back, {user?.fullName?.split(" ")[0]}</h1>
       <p className="text-white/50 text-sm mb-8">Here's where you stand today.</p>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Stat label="Leaderboard rank" value={myRank ? `#${myRank.rank}` : "—"} />
         <Stat label="Total points" value={myRank ? myRank.points : 0} />
         <Stat label="Total runs" value={runs.length} />
@@ -45,7 +45,7 @@ export default function OverviewPage() {
         )}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="stat-card">
           <h2 className="font-display font-semibold mb-3">Recent workouts</h2>
           {workouts.slice(0, 5).map((w) => (
