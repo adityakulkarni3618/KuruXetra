@@ -13,16 +13,22 @@ const registerSchema = z.object({
   department: z.string().min(1),
   academicYear: z.string().min(1),
   division: z.string().optional(),
-  mobileNumber: z.string().min(10),
+  mobileNumber: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits"),
   email: z.string().email(),
   gender: z.string().optional(),
   dateOfBirth: z.string().optional(),
   bloodGroup: z.string().optional(),
   emergencyContact: z.string().optional(),
+  passoutYear: z.preprocess((val) => {
+    if (typeof val === "string") return Number(val);
+    return val;
+  }, z.number().int().positive().optional()),
   username: z.string().min(3),
   password: z.string().min(6),
+  confirmPassword: z.string().min(6),
   fitnessGoal: z.string().optional(),
   profilePhotoUrl: z.string().optional(),
+  collegeIdUrl: z.string().optional(),
   studentIdCardUrl: z.string().optional(),
   preferredSports: z.array(z.string()).optional(),
 });
@@ -35,7 +41,16 @@ export async function register(req: AuthedRequest, res: Response) {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
   }
-  const { preferredSports, password, ...data } = parsed.data;
+  const { preferredSports, password, confirmPassword, ...data } = parsed.data;
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ error: "Password and confirm password must match" });
+  }
+
+  const currentYear = new Date().getFullYear();
+  if (data.passoutYear && (data.passoutYear < currentYear || data.passoutYear > currentYear + 4)) {
+    return res.status(400).json({ error: `Passout year must be between ${currentYear} and ${currentYear + 4}` });
+  }
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ username: data.username }, { email: data.email }] },
