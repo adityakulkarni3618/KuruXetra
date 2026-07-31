@@ -16,9 +16,9 @@
     - `seed.ts`: Seed script for Super Admin and demo sports.
   - `package.json`: Backend scripts (`dev`, `build`, `start`, `prisma:generate`, `prisma:migrate`, `prisma:seed`).
 - `/frontend`
-  - `app/`: Next.js App Router with login, register, dashboard, and nested dashboard pages.
+  - `app/`: Next.js App Router with root, login, register, dashboard, and nested dashboard pages.
   - `app/dashboard/`: Protected dashboard area with admin, attendance, captain, leaderboard, running, sports, and workouts views.
-  - `components/`: UI components used by frontend pages.
+  - `components/`: currently empty.
   - `lib/`: Shared frontend helpers including `api.ts` and `auth-context.tsx`.
   - `package.json`: Frontend scripts (`dev`, `build`, `start`, `lint`).
 
@@ -44,6 +44,7 @@
 - `app/page.tsx`: Root landing page.
 - `app/login/page.tsx`: Login screen.
 - `app/register/page.tsx`: Registration screen.
+- `app/dashboard/layout.tsx`: Dashboard layout wrapper.
 - `app/dashboard/page.tsx`: Dashboard home.
 - `app/dashboard/admin/page.tsx`: Admin dashboard.
 - `app/dashboard/attendance/page.tsx`: Attendance view.
