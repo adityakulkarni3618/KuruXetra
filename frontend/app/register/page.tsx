@@ -7,19 +7,15 @@ import { api } from "@/lib/api";
 
 const initial = {
   fullName: "",
-  collegeId: "",
   rollNumber: "",
   department: "Computer Engineering",
   academicYear: "FE",
   passoutYear: "",
-  division: "",
   mobileNumber: "",
   email: "",
   gender: "Male",
   dateOfBirth: "",
   bloodGroup: "",
-  emergencyContact: "",
-  username: "",
   password: "",
   confirmPassword: "",
   profilePhotoUrl: "",
@@ -108,7 +104,7 @@ export default function RegisterPage() {
         return false;
       }
     } else if (currentStep === 2) {
-      if (!form.collegeId || !form.rollNumber || !form.department || !form.academicYear || !form.passoutYear) {
+      if (!form.rollNumber || !form.department || !form.academicYear || !form.passoutYear) {
         setError("Please fill out all required academic and account fields.");
         return false;
       }
@@ -122,7 +118,7 @@ export default function RegisterPage() {
         setError(`Passout year must be between ${currentYear} and ${currentYear + 4}.`);
         return false;
       }
-      if (!form.username || !form.password || !form.confirmPassword) {
+      if (!form.password || !form.confirmPassword) {
         setError("Please fill out credentials.");
         return false;
       }
@@ -175,13 +171,14 @@ export default function RegisterPage() {
         auth: false,
         body: JSON.stringify({
           ...payload,
+          confirmPassword,
           profilePhotoUrl,
           collegeIdUrl: studentIdCardUrl ? studentIdCardUrl : undefined,
           studentIdCardUrl,
         }),
       });
 
-      setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId}. ${res.message}`);
+      setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId}. Your username is "${res.username}" — save it, you'll need it to log in. ${res.message}`);
       setTimeout(() => router.push("/login"), 3500);
     } catch (err: any) {
       setError(err.message);
@@ -287,14 +284,7 @@ export default function RegisterPage() {
                     onChange={(v) => update("bloodGroup", v)}
                     placeholder="e.g. O+"
                   />
-                  <div className="md:col-span-2">
-                    <Field
-                      label="Emergency Contact Info"
-                      value={form.emergencyContact}
-                      onChange={(v) => update("emergencyContact", v)}
-                      placeholder="e.g. Parent Name: 9988776655"
-                    />
-                  </div>
+                  
                 </div>
               </div>
             )}
@@ -306,13 +296,7 @@ export default function RegisterPage() {
                   Step 2: Academic + Account Information
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <Field
-                    label="College ID"
-                    value={form.collegeId}
-                    onChange={(v) => update("collegeId", v)}
-                    required
-                    placeholder="e.g. CE123456"
-                  />
+                  
                   <Field
                     label="Roll Number"
                     value={form.rollNumber}
@@ -355,19 +339,8 @@ export default function RegisterPage() {
                     required
                     placeholder="2028"
                   />
-                  <Field
-                    label="Division / Section"
-                    value={form.division}
-                    onChange={(v) => update("division", v)}
-                    placeholder="e.g. A"
-                  />
-                  <Field
-                    label="Username"
-                    value={form.username}
-                    onChange={(v) => update("username", v)}
-                    required
-                    placeholder="johndoe_athlete"
-                  />
+                  
+                  
                   <Field
                     label="Password"
                     type="password"
