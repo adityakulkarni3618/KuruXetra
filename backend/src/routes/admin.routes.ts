@@ -1,14 +1,15 @@
-import { Router, Response } from "express";
-import { prisma } from "../lib/prisma";
-import { requireAuth, AuthedRequest } from "../middleware/auth";
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
+import { searchUsers, promoteToSportsSecretary } from "../controllers/admin.controller";
+import { prisma } from "../lib/prisma";
+import { Response } from "express";
+import { AuthedRequest } from "../middleware/auth";
 
 const router = Router();
 
-// Apply auth and role protection to all routes in this file
 router.use(requireAuth, requireRole("SUPER_ADMIN"));
 
-// GET /api/admin/pending-users - List all PENDING_APPROVAL accounts
 router.get("/pending-users", async (req: AuthedRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
@@ -41,7 +42,6 @@ router.get("/pending-users", async (req: AuthedRequest, res: Response) => {
   }
 });
 
-// PATCH /api/admin/users/:id/approve - Approve a user
 router.patch("/users/:id/approve", async (req: AuthedRequest, res: Response) => {
   const { id } = req.params;
   try {
@@ -55,19 +55,18 @@ router.patch("/users/:id/approve", async (req: AuthedRequest, res: Response) => 
   }
 });
 
-// PATCH /api/admin/users/:id/reject - Reject a user (deletes them so they can retry registration)
 router.patch("/users/:id/reject", async (req: AuthedRequest, res: Response) => {
   const { id } = req.params;
   try {
-    // Delete memberships first to avoid constraint issues, though on cascade should trigger
     await prisma.membership.deleteMany({ where: { userId: id } });
-    const user = await prisma.user.delete({
-      where: { id },
-    });
+    const user = await prisma.user.delete({ where: { id } });
     return res.json({ message: "User registration rejected and profile removed", uniqueId: user.uniqueId });
   } catch (error: any) {
     return res.status(404).json({ error: "User not found or deletion failed" });
   }
 });
+
+router.get("/users/search", searchUsers);
+router.post("/users/:id/promote-to-ss", promoteToSportsSecretary);
 
 export default router;

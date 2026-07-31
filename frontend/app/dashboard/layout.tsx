@@ -12,6 +12,7 @@ const baseNav = [
   { href: "/dashboard/running", label: "Running" },
   { href: "/dashboard/leaderboard", label: "Leaderboard" },
   { href: "/dashboard/sports", label: "Sports" },
+  { href: "/dashboard/profile", label: "Profile" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

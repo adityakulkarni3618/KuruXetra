@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -10,7 +10,8 @@ const initial = {
   collegeId: "",
   rollNumber: "",
   department: "Computer Engineering",
-  academicYear: "2026-27",
+  academicYear: "FE",
+  passoutYear: "",
   division: "",
   mobileNumber: "",
   email: "",
@@ -21,7 +22,6 @@ const initial = {
   username: "",
   password: "",
   confirmPassword: "",
-  fitnessGoal: "",
   profilePhotoUrl: "",
   studentIdCardUrl: "",
 };
@@ -29,52 +29,29 @@ const initial = {
 const departments = [
   "Computer Engineering",
   "Civil Engineering",
+  "Mechanical Engineering",
+  "Automobile Engineering",
   "Instrumentation & Control Engineering",
   "Electronics & Telecommunication Engineering",
-  "Automobile Engineering",
-  "Mechanical Engineering",
-  "Applied Science",
 ];
+
+const academicYears = ["FE", "SE", "TE", "BE"];
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(initial);
-  const [sportsList, setSportsList] = useState<any[]>([]);
-  const [selectedSports, setSelectedSports] = useState<string[]>([]);
-  
-  // File upload previews and files
   const [profilePreview, setProfilePreview] = useState<string>("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [idPreview, setIdPreview] = useState<string>("");
   const [idFile, setIdFile] = useState<File | null>(null);
 
   const [error, setError] = useState("");
-  const [backendDown, setBackendDown] = useState(false);
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Load sports dynamically
-  useEffect(() => {
-    api("/api/sports", { auth: false })
-      .then((data) => {
-        if (Array.isArray(data)) setSportsList(data);
-        setBackendDown(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load sports", err);
-        setBackendDown(true);
-      });
-  }, []);
-
   function update(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  function handleSportToggle(sportId: string) {
-    setSelectedSports((prev) =>
-      prev.includes(sportId) ? prev.filter((id) => id !== sportId) : [...prev, sportId]
-    );
   }
 
   const handleProfileFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,15 +100,28 @@ export default function RegisterPage() {
     setError("");
     if (currentStep === 1) {
       if (!form.fullName || !form.email || !form.mobileNumber) {
-        setError("Please fill out all required personal fields (Name, Email, Mobile).");
+        setError("Please fill out all required personal fields (Name, Email, Mobile). ");
+        return false;
+      }
+      if (!/^\d{10}$/.test(form.mobileNumber)) {
+        setError("Mobile number must be exactly 10 digits.");
         return false;
       }
     } else if (currentStep === 2) {
-      if (!form.rollNumber || !form.department || !form.academicYear) {
-        setError("Please fill out all required college fields (Roll No, Dept, Year).");
+      if (!form.collegeId || !form.rollNumber || !form.department || !form.academicYear || !form.passoutYear) {
+        setError("Please fill out all required academic and account fields.");
         return false;
       }
-    } else if (currentStep === 3) {
+      if (form.passoutYear.length !== 4 || !/^\d{4}$/.test(form.passoutYear)) {
+        setError("Passout year must be a valid 4-digit year.");
+        return false;
+      }
+      const year = Number(form.passoutYear);
+      const currentYear = new Date().getFullYear();
+      if (year < currentYear || year > currentYear + 4) {
+        setError(`Passout year must be between ${currentYear} and ${currentYear + 4}.`);
+        return false;
+      }
       if (!form.username || !form.password || !form.confirmPassword) {
         setError("Please fill out credentials.");
         return false;
@@ -144,59 +134,50 @@ export default function RegisterPage() {
         setError("Password must be at least 6 characters long.");
         return false;
       }
-    } else if (currentStep === 4) {
-      if (!idFile) {
-        setError("Please upload a photo of your Student ID Card.");
-        return false;
-      }
     }
     return true;
   }
 
   function nextStep() {
     if (validateStep(step)) {
-      setStep((s) => s + 1);
+      setStep((s) => Math.min(3, s + 1));
     }
   }
 
   function prevStep() {
     setError("");
-    setStep((s) => s - 1);
+    setStep((s) => Math.max(1, s - 1));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!validateStep(4)) return;
+    if (!validateStep(3)) return;
 
     setLoading(true);
     try {
       let profilePhotoUrl = "";
       let studentIdCardUrl = "";
 
-      // Upload profile image if available
       if (profileFile) {
         profilePhotoUrl = await uploadToCloudinary(profileFile);
       }
 
-      // Upload ID image (validated presence)
       if (idFile) {
         studentIdCardUrl = await uploadToCloudinary(idFile);
       }
 
       const { confirmPassword, ...payload } = form;
-      const collegeId = form.rollNumber;
-      
+
       const res = await api("/api/auth/register", {
         method: "POST",
         auth: false,
         body: JSON.stringify({
           ...payload,
-          collegeId,
           profilePhotoUrl,
+          collegeIdUrl: studentIdCardUrl ? studentIdCardUrl : undefined,
           studentIdCardUrl,
-          preferredSports: selectedSports,
         }),
       });
 
@@ -230,22 +211,16 @@ export default function RegisterPage() {
           {/* Progress Indicator */}
           <div className="mb-8">
             <div className="flex justify-between text-xs font-semibold text-white/50 mb-2">
-              <span>Step {step} of 4</span>
-              <span>{Math.round(((step - 1) / 3) * 100)}% Complete</span>
+              <span>Step {step} of 3</span>
+              <span>{Math.round(((step - 1) / 2) * 100)}% Complete</span>
             </div>
             <div className="h-1.5 w-full bg-surface border border-border rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue to-gold transition-all duration-300"
-                style={{ width: `${(step / 4) * 100}%` }}
+                style={{ width: `${((step - 1) / 2) * 100}%` }}
               />
             </div>
           </div>
-
-          {backendDown && (
-            <div className="bg-gold/10 border border-gold/30 text-gold text-xs rounded-lg px-4 py-3 mb-6">
-              ⚠️ <strong>Backend Server Offline:</strong> Could not connect to the API on port 4000. Please ensure the backend is running (`npm run dev` in the backend directory).
-            </div>
-          )}
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6 animate-pulse">
@@ -258,7 +233,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={step === 4 ? handleSubmit : (e) => e.preventDefault()} className="space-y-6">
+          <form onSubmit={step === 3 ? handleSubmit : (e) => e.preventDefault()} className="space-y-6">
             {/* STEP 1: PERSONAL INFO */}
             {step === 1 && (
               <div className="space-y-4">
@@ -324,13 +299,20 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* STEP 2: COLLEGE INFO */}
+            {/* STEP 2: COLLEGE + ACCOUNT INFO */}
             {step === 2 && (
               <div className="space-y-4">
                 <h3 className="font-display font-semibold text-base text-gold border-b border-border pb-2 mb-4">
-                  Step 2: College Identity
+                  Step 2: Academic + Account Information
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
+                  <Field
+                    label="College ID"
+                    value={form.collegeId}
+                    onChange={(v) => update("collegeId", v)}
+                    required
+                    placeholder="e.g. CE123456"
+                  />
                   <Field
                     label="Roll Number"
                     value={form.rollNumber}
@@ -352,12 +334,26 @@ export default function RegisterPage() {
                       ))}
                     </select>
                   </label>
+                  <label className="block">
+                    <span className="label">Academic Year</span>
+                    <select
+                      className="input-field appearance-none bg-surface"
+                      value={form.academicYear}
+                      onChange={(e) => update("academicYear", e.target.value)}
+                    >
+                      {academicYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <Field
-                    label="Academic Year"
-                    value={form.academicYear}
-                    onChange={(v) => update("academicYear", v)}
+                    label="Passout Year"
+                    value={form.passoutYear}
+                    onChange={(v) => update("passoutYear", v)}
                     required
-                    placeholder="e.g. 2026-27"
+                    placeholder="2028"
                   />
                   <Field
                     label="Division / Section"
@@ -365,29 +361,12 @@ export default function RegisterPage() {
                     onChange={(v) => update("division", v)}
                     placeholder="e.g. A"
                   />
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: PREFERENCES & CREDENTIALS */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <h3 className="font-display font-semibold text-base text-gold border-b border-border pb-2 mb-4">
-                  Step 3: Account Credentials & Preferences
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
                   <Field
                     label="Username"
                     value={form.username}
                     onChange={(v) => update("username", v)}
                     required
                     placeholder="johndoe_athlete"
-                  />
-                  <Field
-                    label="Fitness Goal"
-                    value={form.fitnessGoal}
-                    onChange={(v) => update("fitnessGoal", v)}
-                    placeholder="e.g. Improve 5k Run Pace"
                   />
                   <Field
                     label="Password"
@@ -404,48 +383,20 @@ export default function RegisterPage() {
                     required
                   />
                 </div>
-
-                <div className="mt-6">
-                  <span className="label mb-2">Preferred Sports (Select multiple)</span>
-                  {sportsList.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {sportsList.map((sport) => {
-                        const isSelected = selectedSports.includes(sport.id);
-                        return (
-                          <button
-                            type="button"
-                            key={sport.id}
-                            onClick={() => handleSportToggle(sport.id)}
-                            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
-                              isSelected
-                                ? "bg-blue border-blue text-white shadow-md shadow-blue/20 scale-[1.03]"
-                                : "bg-surface border-border text-white/60 hover:text-white hover:border-white/20"
-                            }`}
-                          >
-                            {sport.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-white/30">Loading sports availability...</p>
-                  )}
-                </div>
               </div>
             )}
 
-            {/* STEP 4: FILE UPLOAD (PREMIUM STYLING) */}
-            {step === 4 && (
+            {/* STEP 3: OPTIONAL UPLOADS */}
+            {step === 3 && (
               <div className="space-y-4">
                 <h3 className="font-display font-semibold text-base text-gold border-b border-border pb-2 mb-4">
-                  Step 4: Supporting Verification Documents
+                  Step 3: Optional Verification Uploads
                 </h3>
                 <p className="text-xs text-white/40 mb-6">
-                  Please upload a clear profile portrait and your Student ID Card. This aids the Sports Secretary in authentication.
+                  Upload your college ID and profile photo now, or skip this step and do it later from your profile page.
                 </p>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                  {/* Profile Photo Upload */}
                   <div className="stat-card flex flex-col items-center justify-between min-h-[220px]">
                     <div className="w-full text-center">
                       <span className="label mb-2">Profile Photo</span>
@@ -473,10 +424,9 @@ export default function RegisterPage() {
                     </label>
                   </div>
 
-                  {/* ID Card Upload */}
                   <div className="stat-card flex flex-col items-center justify-between min-h-[220px]">
                     <div className="w-full text-center">
-                      <span className="label mb-2">Student ID Card (Front)<span className="text-gold"> *</span></span>
+                      <span className="label mb-2">Student ID Card</span>
                       {idPreview ? (
                         <div className="relative w-full h-24 mx-auto rounded-lg overflow-hidden border border-gold mb-3">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -518,7 +468,7 @@ export default function RegisterPage() {
                 <div />
               )}
 
-              {step < 4 ? (
+              {step < 3 ? (
                 <button
                   type="button"
                   onClick={nextStep}
@@ -527,13 +477,24 @@ export default function RegisterPage() {
                   Continue
                 </button>
               ) : (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-gold px-8 py-2.5 text-sm bg-gradient-to-r from-gold to-yellow-600 hover:brightness-110 shadow-lg shadow-gold/15"
-                >
-                  {loading ? "Registering..." : "Finish Registration"}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="btn-gold px-6 py-2.5 text-sm bg-gradient-to-r from-gold to-yellow-600 hover:brightness-110 shadow-lg shadow-gold/15"
+                  >
+                    {loading ? "Registering..." : "Finish Registration"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="btn-primary px-6 py-2.5 text-sm text-white/80 border border-white/20 hover:text-white hover:bg-surface"
+                  >
+                    Skip for now
+                  </button>
+                </div>
               )}
             </div>
           </form>

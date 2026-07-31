@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
+const TRACK_METERS = 250;
+
 export default function RunningPage() {
   const [runs, setRuns] = useState<any[]>([]);
   const [distanceKm, setDistanceKm] = useState("");
+  const [rounds, setRounds] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
@@ -23,9 +26,17 @@ export default function RunningPage() {
     try {
       await api("/api/running", {
         method: "POST",
-        body: JSON.stringify({ distanceKm: Number(distanceKm), durationMin: Number(durationMin), notes: notes || undefined }),
+        body: JSON.stringify({
+          distanceKm: distanceKm ? Number(distanceKm) : undefined,
+          rounds: rounds ? Number(rounds) : undefined,
+          durationMin: Number(durationMin),
+          notes: notes || undefined,
+        }),
       });
-      setDistanceKm(""); setDurationMin(""); setNotes("");
+      setDistanceKm("");
+      setRounds("");
+      setDurationMin("");
+      setNotes("");
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -35,11 +46,13 @@ export default function RunningPage() {
   }
 
   const totalKm = runs.reduce((s, r) => s + r.distanceKm, 0);
+  const derivedDistance = rounds ? (Number(rounds) * TRACK_METERS) / 1000 : distanceKm ? Number(distanceKm) : undefined;
+  const derivedRounds = distanceKm ? (Number(distanceKm) * 1000) / TRACK_METERS : rounds ? Number(rounds) : undefined;
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-1">Running</h1>
-      <p className="text-white/50 text-sm mb-8">Log a run. Pace is calculated automatically. +20 points per entry.</p>
+      <p className="text-white/50 text-sm mb-8">Log a run by distance or track rounds; pace is calculated automatically.</p>
 
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
 
@@ -48,20 +61,51 @@ export default function RunningPage() {
         <p className="font-display text-3xl font-bold text-gold">{totalKm.toFixed(1)} km</p>
       </div>
 
-      <form onSubmit={submit} className="stat-card grid md:grid-cols-3 gap-4 mb-8">
+      <form onSubmit={submit} className="stat-card grid md:grid-cols-4 gap-4 mb-8">
         <label className="block">
           <span className="label">Distance (km)</span>
-          <input className="input-field" type="number" step="0.1" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} required />
+          <input
+            className="input-field"
+            type="number"
+            step="0.1"
+            value={distanceKm}
+            onChange={(e) => setDistanceKm(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="label">Rounds (250m)</span>
+          <input
+            className="input-field"
+            type="number"
+            step="1"
+            value={rounds}
+            onChange={(e) => setRounds(e.target.value)}
+          />
         </label>
         <label className="block">
           <span className="label">Duration (min)</span>
-          <input className="input-field" type="number" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} required />
+          <input
+            className="input-field"
+            type="number"
+            value={durationMin}
+            onChange={(e) => setDurationMin(e.target.value)}
+            required
+          />
         </label>
         <label className="block">
           <span className="label">Notes</span>
-          <input className="input-field" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <input
+            className="input-field"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
         </label>
-        <div className="md:col-span-3">
+        <div className="md:col-span-4">
+          <p className="text-xs text-white/40 mb-3">
+            {derivedDistance && !distanceKm && `Approx. ${derivedDistance.toFixed(2)} km based on ${rounds} rounds.`}
+            {derivedRounds && !rounds && `Approx. ${derivedRounds.toFixed(1)} rounds based on ${distanceKm} km.`}
+            {!derivedDistance && !derivedRounds && "Enter either a distance or a rounds count."}
+          </p>
           <button type="submit" disabled={loading} className="btn-gold">Log run</button>
         </div>
       </form>
