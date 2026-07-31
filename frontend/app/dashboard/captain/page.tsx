@@ -9,30 +9,106 @@ export default function CaptainPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [scheduleForm, setScheduleForm] = useState({ title: "", description: "", scheduledAt: "" });
+  const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "" });
+  const [meetingScores, setMeetingScores] = useState<Record<string, { userId: string; points: string }>>({});
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   async function load() {
     const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
     const sport = sports.find((s: any) => s.captainId === me.id);
     setMySport(sport);
     if (sport) {
-      const [m, a] = await Promise.all([
+      const [m, a, ann, meet] = await Promise.all([
         api(`/api/sports/${sport.id}/members`),
         api(`/api/attendance/sport/${sport.id}`),
+        api(`/api/admin-features/announcements?sportId=${sport.id}`),
+        api(`/api/admin-features/meetings?sportId=${sport.id}`),
       ]);
       setMembers(m);
       setAttendance(a);
+      setAnnouncements(ann);
+      setMeetings(meet);
     }
   }
   useEffect(() => { load(); }, []);
 
   async function review(membershipId: string, decision: "APPROVED" | "REJECTED") {
     setError("");
+    setMessage("");
     try {
       await api(`/api/sports/memberships/${membershipId}/review`, {
         method: "POST",
         body: JSON.stringify({ decision }),
       });
+      setMessage("Membership decision saved.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function scheduleMeeting(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/admin-features/meetings", {
+        method: "POST",
+        body: JSON.stringify({
+          sportId: mySport.id,
+          title: scheduleForm.title,
+          description: scheduleForm.description,
+          scheduledAt: scheduleForm.scheduledAt,
+        }),
+      });
+      setScheduleForm({ title: "", description: "", scheduledAt: "" });
+      setMessage("Meeting scheduled.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function postAnnouncement(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/admin-features/announcements", {
+        method: "POST",
+        body: JSON.stringify({
+          title: announcementForm.title,
+          body: announcementForm.body,
+          sportId: mySport.id,
+        }),
+      });
+      setAnnouncementForm({ title: "", body: "" });
+      setMessage("Announcement posted.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function scoreMeeting(meetingId: string) {
+    const score = meetingScores[meetingId];
+    if (!score?.userId || !score?.points) {
+      setError("Select a team member and enter points.");
+      return;
+    }
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin-features/meetings/${meetingId}/scores`, {
+        method: "POST",
+        body: JSON.stringify({ userId: score.userId, points: Number(score.points) }),
+      });
+      setMessage("Score recorded.");
+      setMeetingScores((prev) => ({ ...prev, [meetingId]: { userId: "", points: "" } }));
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -49,9 +125,10 @@ export default function CaptainPage() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-1">{mySport.name} — Team management</h1>
-      <p className="text-white/50 text-sm mb-8">Approve join requests and monitor your team's attendance.</p>
+      <p className="text-white/50 text-sm mb-8">Approve join requests, schedule meetings, and share announcements with your team.</p>
 
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
+      {message && <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
 
       <h2 className="font-display font-semibold mb-3">Pending requests ({pending.length})</h2>
       <div className="space-y-2 mb-8">
@@ -79,6 +156,133 @@ export default function CaptainPage() {
           </div>
         ))}
         {approved.length === 0 && <p className="text-sm text-white/40">No approved members yet.</p>}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6 mb-10">
+        <div className="stat-card">
+          <h2 className="font-display font-semibold mb-3">Schedule a meeting</h2>
+          <form onSubmit={scheduleMeeting} className="space-y-4">
+            <label className="block">
+              <span className="label">Title</span>
+              <input
+                className="input-field"
+                value={scheduleForm.title}
+                onChange={(e) => setScheduleForm((prev) => ({ ...prev, title: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="label">Date & time</span>
+              <input
+                className="input-field"
+                type="datetime-local"
+                value={scheduleForm.scheduledAt}
+                onChange={(e) => setScheduleForm((prev) => ({ ...prev, scheduledAt: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="label">Description</span>
+              <textarea
+                className="input-field min-h-[120px]"
+                value={scheduleForm.description}
+                onChange={(e) => setScheduleForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </label>
+            <button type="submit" className="btn-gold">Schedule meeting</button>
+          </form>
+        </div>
+
+        <div className="stat-card">
+          <h2 className="font-display font-semibold mb-3">Post announcement</h2>
+          <form onSubmit={postAnnouncement} className="space-y-4">
+            <label className="block">
+              <span className="label">Title</span>
+              <input
+                className="input-field"
+                value={announcementForm.title}
+                onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, title: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="label">Body</span>
+              <textarea
+                className="input-field min-h-[120px]"
+                value={announcementForm.body}
+                onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, body: e.target.value }))}
+                required
+              />
+            </label>
+            <button type="submit" className="btn-gold">Post announcement</button>
+          </form>
+        </div>
+      </div>
+
+      <h2 className="font-display font-semibold mb-3">Upcoming meetings</h2>
+      <div className="space-y-3 mb-10">
+        {meetings.map((meeting) => (
+          <div key={meeting.id} className="stat-card">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium">{meeting.title}</p>
+                <p className="text-xs text-white/40">Scheduled for {new Date(meeting.scheduledAt).toLocaleString()}</p>
+              </div>
+              <span className="text-xs text-white/40">{meeting.sport?.name}</span>
+            </div>
+            <p className="text-sm text-white/50 mt-3">{meeting.description || "No description provided."}</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className="label">Select athlete</span>
+                <select
+                  className="input-field"
+                  value={meetingScores[meeting.id]?.userId || ""}
+                  onChange={(e) => setMeetingScores((prev) => ({
+                    ...prev,
+                    [meeting.id]: { userId: e.target.value, points: prev[meeting.id]?.points || "" },
+                  }))}
+                >
+                  <option value="">Choose athlete</option>
+                  {approved.map((m) => (
+                    <option key={m.user.id} value={m.user.id}>{m.user.fullName}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="label">Points</span>
+                <input
+                  className="input-field"
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={meetingScores[meeting.id]?.points || ""}
+                  onChange={(e) => setMeetingScores((prev) => ({
+                    ...prev,
+                    [meeting.id]: { userId: prev[meeting.id]?.userId || "", points: e.target.value },
+                  }))}
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() => scoreMeeting(meeting.id)}
+              className="btn-gold mt-4"
+            >
+              Record score
+            </button>
+            {meeting.scores?.length > 0 && (
+              <div className="mt-4 text-sm text-white/50">
+                <p className="font-medium mb-2">Existing scores</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {meeting.scores.map((score: any) => (
+                    <li key={score.id}>{score.user.fullName}: {score.points} pts</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ))}
+        {meetings.length === 0 && <p className="text-sm text-white/40">No meetings scheduled yet.</p>}
       </div>
 
       <h2 className="font-display font-semibold mb-3">Recent team attendance</h2>
