@@ -3,25 +3,30 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-const empty = { name: "", exercise: "", sets: "", reps: "", weightKg: "", durationMin: "", calories: "", notes: "" };
+const empty = { workoutTypeId: "", exercise: "", sets: "", reps: "", weightKg: "", durationMin: "", calories: "", notes: "" };
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    setWorkouts(await api("/api/workouts/me"));
+    const [w, t] = await Promise.all([api("/api/workouts/me"), api("/api/admin-features/workout-types")]);
+    setWorkouts(w);
+    setTypes(t.filter((type: any) => type.isActive));
   }
   useEffect(() => { load(); }, []);
+
+  const selectedType = types.find((type) => type.id === form.workoutTypeId);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const payload: any = { name: form.name, exercise: form.exercise || undefined, notes: form.notes || undefined };
+      const payload: any = { workoutTypeId: form.workoutTypeId, exercise: form.exercise || undefined, notes: form.notes || undefined };
       for (const k of ["sets", "reps", "weightKg", "durationMin", "calories"] as const) {
         if (form[k]) payload[k] = Number(form[k]);
       }
@@ -38,19 +43,41 @@ export default function WorkoutsPage() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-1">Workouts</h1>
-      <p className="text-white/50 text-sm mb-8">Log your training. +15 points per entry.</p>
+      <p className="text-white/50 text-sm mb-8">Log a workout from the approved workout type list.</p>
 
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
 
       <form onSubmit={submit} className="stat-card grid md:grid-cols-3 gap-4 mb-8">
-        <Input label="Workout name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
-        <Input label="Exercise" value={form.exercise} onChange={(v) => setForm({ ...form, exercise: v })} />
+        <label className="block md:col-span-3">
+          <span className="label">Workout type</span>
+          <select
+            className="input-field"
+            value={form.workoutTypeId}
+            required
+            onChange={(e) => setForm({ ...form, workoutTypeId: e.target.value })}
+          >
+            <option value="">Select workout type</option>
+            {types.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name} ({type.points} pts)
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {selectedType && (
+          <div className="md:col-span-3 text-sm text-white/50">
+            Selected type awards <strong>{selectedType.points} points</strong>.
+          </div>
+        )}
+
+        <Input label="Exercise details" value={form.exercise} onChange={(v) => setForm({ ...form, exercise: v })} />
         <Input label="Duration (min)" value={form.durationMin} onChange={(v) => setForm({ ...form, durationMin: v })} type="number" />
         <Input label="Sets" value={form.sets} onChange={(v) => setForm({ ...form, sets: v })} type="number" />
         <Input label="Reps" value={form.reps} onChange={(v) => setForm({ ...form, reps: v })} type="number" />
         <Input label="Weight (kg)" value={form.weightKg} onChange={(v) => setForm({ ...form, weightKg: v })} type="number" />
         <Input label="Calories" value={form.calories} onChange={(v) => setForm({ ...form, calories: v })} type="number" />
-        <div className="md:col-span-2">
+        <div className="md:col-span-3">
           <Input label="Notes" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
         </div>
         <div className="md:col-span-3">
