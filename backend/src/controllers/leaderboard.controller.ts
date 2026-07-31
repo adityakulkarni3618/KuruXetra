@@ -14,14 +14,16 @@ export async function leaderboard(req: AuthedRequest, res: Response) {
 
   let userIds: string[] = grouped.map((g: { userId: string }) => g.userId);
 
-  if (sportId) {
-    const members = await prisma.membership.findMany({
-      where: { sportId, status: "APPROVED" },
-      select: { userId: true },
-    });
-    const memberIds = new Set(members.map((m: { userId: string }) => m.userId));
-    userIds = userIds.filter((id: string) => memberIds.has(id));
-  }
+  const approvedMembers = await prisma.membership.findMany({
+    where: {
+      status: "APPROVED",
+      ...(sportId ? { sportId } : {}),
+    },
+    select: { userId: true },
+  });
+
+  const approvedMemberIds = new Set(approvedMembers.map((m: { userId: string }) => m.userId));
+  userIds = userIds.filter((id: string) => approvedMemberIds.has(id));
 
   const users = await prisma.user.findMany({
     where: {
