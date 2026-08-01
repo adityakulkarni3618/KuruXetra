@@ -9,10 +9,8 @@ const updateProfileSchema = z.object({
   gender: z.string().optional(),
   dateOfBirth: z.string().optional(),
   bloodGroup: z.string().optional(),
-  emergencyContact: z.string().optional(),
   department: z.string().optional(),
   academicYear: z.string().optional(),
-  division: z.string().optional(),
   passoutYear: z.preprocess((val) => {
     if (typeof val === "string") return Number(val);
     return val;
