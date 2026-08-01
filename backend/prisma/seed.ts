@@ -4,11 +4,11 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash("Admin@123", 10);
+  const passwordHash = await bcrypt.hash("SSSS@123", 10);
 
   const admin = await prisma.user.upsert({
     where: { uniqueId: "KS000001" },
-    update: {},
+    update: { passwordHash },
     create: {
       uniqueId: "KS000001",
       passwordHash,
@@ -36,7 +36,7 @@ async function main() {
     });
   }
 
-  console.log("Seeded super admin:", admin.uniqueId, "/ password: Admin@123");
+  console.log("Seeded super admin:", admin.uniqueId, "/ password: SSSS@123");
   console.log("Seeded sports:", sports.join(", "));
 }
 
