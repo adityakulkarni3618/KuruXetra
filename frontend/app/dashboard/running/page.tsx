@@ -14,6 +14,30 @@ export default function RunningPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleDistanceChange = (val: string) => {
+    setDistanceKm(val);
+    if (val) {
+      const parsed = parseFloat(val);
+      if (!isNaN(parsed) && parsed > 0) {
+        setRounds(String(Math.round((parsed * 1000) / TRACK_METERS)));
+      }
+    } else {
+      setRounds("");
+    }
+  };
+
+  const handleRoundsChange = (val: string) => {
+    setRounds(val);
+    if (val) {
+      const parsed = parseFloat(val);
+      if (!isNaN(parsed) && parsed > 0) {
+        setDistanceKm(String((parsed * TRACK_METERS) / 1000));
+      }
+    } else {
+      setDistanceKm("");
+    }
+  };
+
   async function load() {
     setRuns(await api("/api/running/me"));
   }
@@ -69,7 +93,7 @@ export default function RunningPage() {
             type="number"
             step="0.1"
             value={distanceKm}
-            onChange={(e) => setDistanceKm(e.target.value)}
+            onChange={(e) => handleDistanceChange(e.target.value)}
           />
         </label>
         <label className="block">
@@ -79,7 +103,7 @@ export default function RunningPage() {
             type="number"
             step="1"
             value={rounds}
-            onChange={(e) => setRounds(e.target.value)}
+            onChange={(e) => handleRoundsChange(e.target.value)}
           />
         </label>
         <label className="block">
