@@ -2,11 +2,12 @@
 ===========================================================
 
 ## Current status
-- Completed feature additions for admin/captain workflows, workout logging, running logging, and profile editing.
+- Authentication transitioned fully to Athletic ID (`uniqueId`) with password confirmation; `username` concept dropped.
+- Completed feature additions for admin/captain workflows, workout logging, running logging, profile editing, and multiple sports secretaries.
 - New profile page added to dashboard and backend profile picture/college ID update endpoints implemented.
-- Admin `/api/admin/users/search` and `/api/admin/users/:id/promote-to-ss` are active.
+- Admin `/api/admin/users/search` and `/api/admin/users/:id/promote-to-ss` are active and support multiple super admins.
+- Seed data defaults to Admin ID `KX000001` and password `SSSS@123`.
 - Backend and frontend builds both pass.
-
 ## Project Stack
 - **Backend**: Node.js, Express, TypeScript, PostgreSQL, Prisma, JWT authentication.
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS, Recharts.
