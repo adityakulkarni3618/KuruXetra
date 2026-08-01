@@ -14,6 +14,7 @@ export default function CaptainPage() {
   const [scheduleForm, setScheduleForm] = useState({ title: "", description: "", scheduledAt: "" });
   const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "" });
   const [meetingScores, setMeetingScores] = useState<Record<string, { userId: string; points: string }>>({});
+  const [markForm, setMarkForm] = useState({ userId: "", ground: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -76,6 +77,30 @@ export default function CaptainPage() {
         body: JSON.stringify({ userId, badgeName }),
       });
       setMessage(`${badgeName} badge awarded successfully.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+  async function markAthleteAttendance(e: React.FormEvent) {
+    e.preventDefault();
+    if (!markForm.userId) {
+      setError("Please select an athlete to mark attendance.");
+      return;
+    }
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/attendance/mark", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: markForm.userId,
+          sportId: mySport.id,
+          ground: markForm.ground || undefined,
+        }),
+      });
+      setMarkForm({ userId: "", ground: "" });
+      setMessage("Attendance marked successfully.");
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -341,6 +366,36 @@ export default function CaptainPage() {
         {meetings.length === 0 && <p className="text-sm text-white/40">No meetings scheduled yet.</p>}
       </div>
 
+      <div className="stat-card mb-6">
+        <h2 className="font-display font-semibold mb-3">Mark athlete attendance</h2>
+        <form onSubmit={markAthleteAttendance} className="grid md:grid-cols-3 gap-4 items-end">
+          <label className="block">
+            <span className="label">Select athlete</span>
+            <select
+              className="input-field"
+              value={markForm.userId}
+              onChange={(e) => setMarkForm((prev) => ({ ...prev, userId: e.target.value }))}
+              required
+            >
+              <option value="">Choose athlete</option>
+              {approved.map((m) => (
+                <option key={m.user.id} value={m.user.id}>{m.user.fullName}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="label">Ground</span>
+            <input
+              className="input-field"
+              value={markForm.ground}
+              onChange={(e) => setMarkForm((prev) => ({ ...prev, ground: e.target.value }))}
+              placeholder="e.g. Main Ground"
+            />
+          </label>
+          <button type="submit" className="btn-gold">Mark present</button>
+        </form>
+      </div>
+
       <h2 className="font-display font-semibold mb-3">Recent team attendance</h2>
       <div className="stat-card p-0 overflow-hidden">
         <table className="w-full text-sm">
@@ -349,7 +404,8 @@ export default function CaptainPage() {
               <th className="text-left px-4 py-3">Athlete</th>
               <th className="text-left px-4 py-3">Date</th>
               <th className="text-left px-4 py-3">Time in</th>
-              <th className="text-left px-4 py-3">Duration</th>
+              <th className="text-left px-4 py-3">Ground</th>
+              <th className="text-left px-4 py-3">Type</th>
             </tr>
           </thead>
           <tbody>
@@ -358,11 +414,18 @@ export default function CaptainPage() {
                 <td className="px-4 py-3">{a.user.fullName}</td>
                 <td className="px-4 py-3">{new Date(a.timeIn).toLocaleDateString()}</td>
                 <td className="px-4 py-3">{new Date(a.timeIn).toLocaleTimeString()}</td>
-                <td className="px-4 py-3">{a.durationMin ? `${a.durationMin} min` : "—"}</td>
+                <td className="px-4 py-3">{a.ground || "—"}</td>
+                <td className="px-4 py-3 text-xs">
+                  {a.markedBy ? (
+                    <span className="text-gold font-medium">Captain marked</span>
+                  ) : (
+                    <span className="text-white/40">Self check-in</span>
+                  )}
+                </td>
               </tr>
             ))}
             {attendance.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-6 text-center text-white/40">No attendance yet.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-white/40">No attendance yet.</td></tr>
             )}
           </tbody>
         </table>
