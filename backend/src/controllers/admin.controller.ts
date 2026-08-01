@@ -163,6 +163,7 @@ export async function deleteUserPermanently(req: AuthedRequest, res: Response) {
       prisma.pointsLedger.deleteMany({ where: { userId: id } }),
       prisma.meetingScore.deleteMany({ where: { userId: id } }),
       prisma.meetingScore.deleteMany({ where: { meeting: { scheduledBy: id } } }),
+      prisma.userBadge.deleteMany({ where: { OR: [{ userId: id }, { awardedById: id }] } }),
 
       // 2. Dissociate captaincy, delete meetings/announcements authored
       prisma.sport.updateMany({ where: { captainId: id }, data: { captainId: null } }),

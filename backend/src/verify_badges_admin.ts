@@ -37,16 +37,24 @@ async function runTests() {
   let athleteToken = "";
   let athleteUserId = "";
 
-  const existingAthlete = await prisma.user.findUnique({ where: { uniqueId: testAthleteUniqueId } });
-  if (existingAthlete) {
-    await prisma.$transaction([
-      prisma.userBadge.deleteMany({ where: { userId: existingAthlete.id } }),
-      prisma.runningLog.deleteMany({ where: { userId: existingAthlete.id } }),
-      prisma.workout.deleteMany({ where: { userId: existingAthlete.id } }),
-      prisma.attendance.deleteMany({ where: { userId: existingAthlete.id } }),
-      prisma.membership.deleteMany({ where: { userId: existingAthlete.id } }),
-      prisma.user.delete({ where: { id: existingAthlete.id } }),
-    ]).catch(() => {});
+  const existingAthletes = await prisma.user.findMany({
+    where: {
+      OR: [
+        { uniqueId: testAthleteUniqueId },
+        { email: "badge_tester@kuruxetra.com" }
+      ]
+    }
+  });
+  for (const athlete of existingAthletes) {
+    try {
+      const delRes = await fetch(`${BACKEND_URL}/api/admin/users/${athlete.id}/remove-profile`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      console.log(`Cleaned up user ${athlete.uniqueId} / ${athlete.email}. Status: ${delRes.status}`);
+    } catch (e: any) {
+      console.error(`Cleanup failed for user ${athlete.uniqueId}:`, e.message);
+    }
   }
 
   // Register the athlete
@@ -283,15 +291,15 @@ async function runTests() {
   }
 
   // Clean up
-  await prisma.$transaction([
-    prisma.userBadge.deleteMany({ where: { userId: athleteUserId } }),
-    prisma.runningLog.deleteMany({ where: { userId: athleteUserId } }),
-    prisma.workout.deleteMany({ where: { userId: athleteUserId } }),
-    prisma.attendance.deleteMany({ where: { userId: athleteUserId } }),
-    prisma.membership.deleteMany({ where: { userId: athleteUserId } }),
-    prisma.user.delete({ where: { id: athleteUserId } }),
-  ]).catch(() => {});
-  console.log("\nCleanup done. Tests completed.");
+  try {
+    await fetch(`${BACKEND_URL}/api/admin/users/${athleteUserId}/remove-profile`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    console.log("\nCleanup done using cascading delete. Tests completed.");
+  } catch (e: any) {
+    console.error("Final cleanup failed:", e.message);
+  }
 }
 
 runTests().catch((err) => {
