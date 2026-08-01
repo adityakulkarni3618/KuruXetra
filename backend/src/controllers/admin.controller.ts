@@ -66,28 +66,14 @@ export async function promoteToSportsSecretary(req: AuthedRequest, res: Response
     const targetUser = await prisma.user.findUnique({ where: { id } });
     if (!targetUser) return res.status(404).json({ error: "Target user not found" });
 
-    const currentSS = await prisma.user.findFirst({ where: { role: "SUPER_ADMIN" } });
-    if (!currentSS) return res.status(500).json({ error: "No current Sports Secretary found" });
-    if (currentSS.id === targetUser.id) return res.status(400).json({ error: "User is already the Sports Secretary" });
-
-    const previousRole = currentSS.priorRole || "STUDENT_ATHLETE";
+    if (targetUser.role === "SUPER_ADMIN") {
+      return res.status(400).json({ error: "User is already a Sports Secretary" });
+    }
 
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: currentSS.id },
-        data: { role: previousRole, priorRole: null },
-      }),
-      prisma.user.update({
         where: { id: targetUser.id },
         data: { priorRole: targetUser.role, role: "SUPER_ADMIN" },
-      }),
-      prisma.roleChangeLog.create({
-        data: {
-          userId: currentSS.id,
-          oldRole: "SUPER_ADMIN",
-          newRole: previousRole,
-          changedById: actorId,
-        },
       }),
       prisma.roleChangeLog.create({
         data: {
@@ -99,7 +85,7 @@ export async function promoteToSportsSecretary(req: AuthedRequest, res: Response
       }),
     ]);
 
-    return res.json({ message: "Sports Secretary updated successfully" });
+    return res.json({ message: "Promoted to Sports Secretary successfully" });
   } catch (error: any) {
     console.error(error);
     return res.status(500).json({ error: "Failed to promote user" });

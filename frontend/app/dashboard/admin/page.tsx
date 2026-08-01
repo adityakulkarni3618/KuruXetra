@@ -296,26 +296,71 @@ export default function AdminPage() {
       </form>
 
       {searchResults.length > 0 && (
-        <div className="space-y-2 mb-10">
+        <div className="space-y-4 mb-10">
           <h3 className="font-display font-semibold mb-3">Search results ({searchResults.length})</h3>
           {searchResults.map((user) => (
-            <div key={user.id} className="stat-card flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-4">
+            <div key={user.id} className="stat-card flex flex-col gap-4 border border-white/10 hover:border-gold/30 transition-all duration-200">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <p className="font-medium">{user.fullName} <span className="text-white/30 text-xs">({user.uniqueId})</span></p>
-                  <p className="text-xs text-white/40">{user.department} · {user.academicYear} · {user.rollNumber}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-lg">{user.fullName}</p>
+                    <span className="text-white/30 text-sm">({user.uniqueId})</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                      "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                    }`}>
+                      {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                      user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
+                      user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
+                      "bg-yellow-500/20 text-yellow-300"
+                    }`}>
+                      {user.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-1">
+                    {user.department} · {user.academicYear} · Roll No: {user.rollNumber} · Passout: {user.passoutYear}
+                  </p>
                 </div>
-                <button
-                  onClick={() => promoteToSS(user.id)}
-                  className="btn-gold text-xs px-3 py-1.5"
-                >
-                  Promote to Sports Secretary
-                </button>
+                {user.role !== "SUPER_ADMIN" && (
+                  <button
+                    onClick={() => promoteToSS(user.id)}
+                    className="btn-gold text-xs px-3 py-1.5 self-start md:self-center"
+                  >
+                    Promote to Sports Secretary
+                  </button>
+                )}
               </div>
-              <div className="grid md:grid-cols-3 gap-3 text-xs text-white/50">
-                <span>{user.email}</span>
-                <span>{user.mobileNumber}</span>
-                <span>{user.status}</span>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs border-t border-white/5 pt-3 text-white/60">
+                <div>
+                  <p className="text-white/30 font-semibold mb-0.5">Contact Details</p>
+                  <p>{user.email}</p>
+                  <p className="mt-0.5">{user.mobileNumber}</p>
+                </div>
+                <div>
+                  <p className="text-white/30 font-semibold mb-0.5">Personal Info</p>
+                  <p>Gender: {user.gender || "N/A"}</p>
+                  <p className="mt-0.5">Blood Group: {user.bloodGroup || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-white/30 font-semibold mb-0.5">Fitness & DOB</p>
+                  <p>DOB: {user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : "N/A"}</p>
+                  <p className="mt-0.5">Goal: {user.fitnessGoal || "None"}</p>
+                </div>
+                <div>
+                  <p className="text-white/30 font-semibold mb-0.5">Documents & Photo</p>
+                  <div className="flex flex-col gap-1 mt-0.5">
+                    {user.profilePhotoUrl ? (
+                      <a href={user.profilePhotoUrl} target="_blank" rel="noreferrer" className="text-blue-light hover:underline">View Profile Photo</a>
+                    ) : <span>No Photo</span>}
+                    {user.studentIdCardUrl || user.collegeIdUrl ? (
+                      <a href={user.studentIdCardUrl || user.collegeIdUrl} target="_blank" rel="noreferrer" className="text-blue-light hover:underline">View ID Card</a>
+                    ) : <span>No ID Card</span>}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
