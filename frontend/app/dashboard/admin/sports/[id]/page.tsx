@@ -5,197 +5,98 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
-export default function SportDetailPage() {
+export default function AdminSportDashboard() {
   const { id: sportId } = useParams() as { id: string };
-  const router = useRouter();
   const [sport, setSport] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [captainSearchId, setCaptainSearchId] = useState("");
-  const [viceCaptainSearchId, setViceCaptainSearchId] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
-  async function load() {
-    setError("");
-    setMessage("");
-    try {
-      const [sportsList, mems] = await Promise.all([
-        api("/api/sports"),
-        api(`/api/sports/${sportId}/members`),
-      ]);
-      const found = sportsList.find((s: any) => s.id === sportId);
-      if (!found) {
-        setError("Sport not found");
-        return;
-      }
-      setSport(found);
-      setMembers(mems);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    async function load() {
+      try {
+        const sportsList = await api("/api/sports");
+        const found = sportsList.find((s: any) => s.id === sportId);
+        if (!found) {
+          setError("Sport not found");
+          return;
+        }
+        setSport(found);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
     load();
   }, [sportId]);
-
-  async function handleAssignCaptain(e: React.FormEvent) {
-    e.preventDefault();
-    if (!captainSearchId) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/sports/${sportId}/captain`, {
-        method: "POST",
-        body: JSON.stringify({ uniqueId: captainSearchId }),
-      });
-      setMessage("Captain assigned successfully.");
-      setCaptainSearchId("");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function handleRemoveCaptain() {
-    if (!confirm("Are you sure you want to remove the captain?")) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/sports/${sportId}/demote-captain`, { method: "POST" });
-      setMessage("Captain demoted successfully.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function handleAssignViceCaptain(e: React.FormEvent) {
-    e.preventDefault();
-    if (!viceCaptainSearchId) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/sports/${sportId}/vice-captain`, {
-        method: "POST",
-        body: JSON.stringify({ uniqueId: viceCaptainSearchId }),
-      });
-      setMessage("Vice-captain assigned successfully.");
-      setViceCaptainSearchId("");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function handleRemoveViceCaptain() {
-    if (!confirm("Are you sure you want to remove the vice-captain?")) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/sports/${sportId}/demote-vice-captain`, { method: "POST" });
-      setMessage("Vice-captain demoted successfully.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  // Admin user actions for team players
-  async function promoteToSS(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/promote-to-ss`, { method: "POST" });
-      setMessage("Promoted to Sports Secretary successfully.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function demoteSS(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/demote-ss`, { method: "POST" }).catch(async (e) => {
-        // Fallback or secondary demote route
-        await api(`/api/admin/users/${userId}/status`, {
-          method: "PATCH",
-          body: JSON.stringify({ role: "STUDENT_ATHLETE" }),
-        });
-      });
-      setMessage("Sports Secretary role removed successfully.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function toggleStatus(userId: string, currentStatus: string) {
-    setError("");
-    setMessage("");
-    const newStatus = currentStatus === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
-    try {
-      await api(`/api/admin/users/${userId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
-      });
-      setMessage(`User account is now ${newStatus}.`);
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function resetPassword(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      const res = await api(`/api/admin/users/${userId}/reset-password`, { method: "POST" });
-      setMessage(`Password reset. Temporary password is: ${res.temporaryPassword}`);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function awardChampion(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/award-badge`, {
-        method: "POST",
-        body: JSON.stringify({ badgeName: "Champion" }),
-      });
-      setMessage("Champion badge awarded successfully.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function removeProfile(userId: string) {
-    if (!confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/remove-profile`, { method: "DELETE" });
-      setMessage("Player profile permanently removed.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
 
   if (loading) {
     return <div className="text-white/40 text-center py-10">Loading sport details...</div>;
   }
 
-  const approvedMembers = members.filter((m) => m.status === "APPROVED");
-  const pendingMembers = members.filter((m) => m.status === "PENDING");
+  if (error || !sport) {
+    return (
+      <div className="stat-card text-center py-10">
+        <p className="text-red-300 font-medium mb-3">{error || "Sport details could not be found."}</p>
+        <Link href="/dashboard/admin" className="text-xs text-gold hover:underline">
+          &larr; Back to Admin Dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  const cards = [
+    {
+      href: `/dashboard/admin/sports/${sportId}/roster`,
+      title: "Team Roster & Roles",
+      desc: "Assign Captain and Vice-Captain, manage roster memberships, promote to SS, suspend, or delete players.",
+      icon: (
+        <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      )
+    },
+    {
+      href: `/dashboard/admin/sports/${sportId}/meetings`,
+      title: "Team Meetings log",
+      desc: "View meeting scores, verify scheduled meetings, and delete scheduled logs.",
+      icon: (
+        <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    },
+    {
+      href: `/dashboard/admin/sports/${sportId}/announcements`,
+      title: "Announcements List",
+      desc: "View published announcements, verify authors, and delete old notice boards.",
+      icon: (
+        <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+        </svg>
+      )
+    },
+    {
+      href: `/dashboard/admin/sports/${sportId}/sessions`,
+      title: "Practice & Workouts Logs",
+      desc: "Track practice sessions logged by captains and review athlete completions and round counts.",
+      icon: (
+        <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )
+    },
+    {
+      href: `/dashboard/admin/sports/${sportId}/attendance`,
+      title: "Attendance Database",
+      desc: "View athlete check-ins, filter by custom ranges, and export CSV/PDF reports.",
+      icon: (
+        <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      )
+    }
+  ];
 
   return (
     <div>
@@ -207,176 +108,27 @@ export default function SportDetailPage() {
 
       <div className="flex justify-between items-start flex-wrap gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl font-bold mb-1 text-white">{sport.name}</h1>
-          <p className="text-white/50 text-sm">{sport.description || "No description provided."}</p>
+          <h1 className="font-display text-3xl font-bold mb-1 text-white">{sport.name} &mdash; Administration</h1>
+          <p className="text-white/50 text-sm">Control administrative roles, rosters, check-in reports, and practice files.</p>
         </div>
-        <div className="flex gap-2">
-          <span className={`text-xs uppercase font-bold px-3 py-1 rounded-full border ${sport.isActive ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-red-500/20 text-red-300 border-red-500/30"}`}>
-            {sport.isActive ? "Active" : "Inactive"}
-          </span>
-        </div>
+        <span className={`text-xs uppercase font-bold px-3 py-1 rounded-full border ${sport.isActive ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-red-500/20 text-red-300 border-red-500/30"}`}>
+          {sport.isActive ? "Active" : "Inactive"}
+        </span>
       </div>
 
-      {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
-      {message && <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
-
-      <div className="grid md:grid-cols-2 gap-6 mb-10">
-        {/* Captain Management Card */}
-        <div className="stat-card">
-          <h2 className="font-display font-semibold mb-3">Captain</h2>
-          <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {cards.map((card) => (
+          <Link key={card.href} href={card.href} className="stat-card flex flex-col justify-between hover:border-gold/30 transition-all group duration-200">
             <div>
-              <p className="text-sm font-medium text-white">
-                {sport.captain ? sport.captain.fullName : "Unassigned"}
-              </p>
-              {sport.captain && <p className="text-xs text-white/40">{sport.captain.uniqueId}</p>}
+              <div className="mb-4">{card.icon}</div>
+              <h2 className="font-display font-semibold text-lg text-white mb-2 group-hover:text-gold transition-colors">{card.title}</h2>
+              <p className="text-xs text-white/50 leading-relaxed">{card.desc}</p>
             </div>
-            {sport.captain && (
-              <button
-                onClick={handleRemoveCaptain}
-                className="text-xs text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors"
-                type="button"
-              >
-                Remove Captain
-              </button>
-            )}
-          </div>
-          <form onSubmit={handleAssignCaptain} className="flex gap-2">
-            <input
-              className="input-field text-xs"
-              placeholder="Athlete ID (e.g. KX000001)"
-              value={captainSearchId}
-              onChange={(e) => setCaptainSearchId(e.target.value)}
-              required
-            />
-            <button type="submit" className="btn-gold text-xs px-3 py-1.5 whitespace-nowrap">
-              Assign Captain
-            </button>
-          </form>
-        </div>
-
-        {/* Vice-Captain Management Card */}
-        <div className="stat-card">
-          <h2 className="font-display font-semibold mb-3">Vice-Captain</h2>
-          <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
-            <div>
-              <p className="text-sm font-medium text-white">
-                {sport.viceCaptain ? sport.viceCaptain.fullName : "Unassigned"}
-              </p>
-              {sport.viceCaptain && <p className="text-xs text-white/40">{sport.viceCaptain.uniqueId}</p>}
+            <div className="mt-6 flex items-center text-xs font-semibold text-gold group-hover:translate-x-1 transition-transform">
+              Open Panel &rarr;
             </div>
-            {sport.viceCaptain && (
-              <button
-                onClick={handleRemoveViceCaptain}
-                className="text-xs text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors"
-                type="button"
-              >
-                Remove Vice-Captain
-              </button>
-            )}
-          </div>
-          <form onSubmit={handleAssignViceCaptain} className="flex gap-2">
-            <input
-              className="input-field text-xs"
-              placeholder="Athlete ID (e.g. KX000001)"
-              value={viceCaptainSearchId}
-              onChange={(e) => setViceCaptainSearchId(e.target.value)}
-              required
-            />
-            <button type="submit" className="btn-gold text-xs px-3 py-1.5 whitespace-nowrap">
-              Assign Vice-Captain
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Roster / Players Section */}
-      <h2 className="font-display font-semibold mb-4 text-white">Team Roster ({approvedMembers.length})</h2>
-      <div className="space-y-4">
-        {approvedMembers.map((m) => {
-          const user = m.user;
-          return (
-            <div key={m.id} className="stat-card border border-white/5 hover:border-gold/20 transition-all">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-lg text-white">{user.fullName}</p>
-                    <span className="text-white/30 text-sm">({user.uniqueId})</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
-                        "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      }`}>
-                      {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
-                      user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
-                        "bg-yellow-500/20 text-yellow-300"
-                      }`}>
-                      {user.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/40 mt-1">
-                    {user.department} · {user.academicYear} · Roll No: {user.rollNumber}
-                  </p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {user.role !== "SUPER_ADMIN" ? (
-                    <button
-                      onClick={() => promoteToSS(user.id)}
-                      className="btn-gold text-xs px-3 py-1.5"
-                    >
-                      Promote to SS
-                    </button>
-                  ) : (
-                    user.uniqueId !== "KX000001" && (
-                      <button
-                        onClick={() => demoteSS(user.id)}
-                        className="btn-primary bg-yellow-600 hover:bg-yellow-500 text-xs px-3 py-1.5"
-                      >
-                        Remove SS
-                      </button>
-                    )
-                  )}
-                  {user.uniqueId !== "KX000001" && (
-                    <>
-                      <button
-                        onClick={() => toggleStatus(user.id, user.status)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                          user.status === "SUSPENDED" ? "bg-green-600 hover:bg-green-500 text-white" : "bg-orange-600 hover:bg-orange-500 text-white"
-                        }`}
-                      >
-                        {user.status === "SUSPENDED" ? "Activate" : "Suspend"}
-                      </button>
-                      <button
-                        onClick={() => resetPassword(user.id)}
-                        className="btn-primary bg-blue-600 hover:bg-blue-500 text-xs px-3 py-1.5"
-                      >
-                        Reset PW
-                      </button>
-                    </>
-                  )}
-                  {user.status === "ACTIVE" && (
-                    <button
-                      onClick={() => awardChampion(user.id)}
-                      className="btn-primary bg-purple-600 hover:bg-purple-500 text-xs px-3 py-1.5"
-                    >
-                      Award Champion
-                    </button>
-                  )}
-                  {user.uniqueId !== "KX000001" && (
-                    <button
-                      onClick={() => removeProfile(user.id)}
-                      className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
-                    >
-                      Delete Profile
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {approvedMembers.length === 0 && <p className="text-sm text-white/40">No team members assigned.</p>}
+          </Link>
+        ))}
       </div>
     </div>
   );
