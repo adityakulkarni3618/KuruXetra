@@ -115,8 +115,6 @@ export async function login(req: AuthedRequest, res: Response) {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return res.status(401).json({ error: "Invalid Athletic ID or password" });
 
-  if (user.status === "PENDING_APPROVAL")
-    return res.status(403).json({ error: "Your account is still pending approval" });
   if (user.status === "SUSPENDED")
     return res.status(403).json({ error: "Your account has been suspended" });
 
@@ -128,6 +126,7 @@ export async function login(req: AuthedRequest, res: Response) {
       uniqueId: user.uniqueId,
       fullName: user.fullName,
       role: user.role,
+      status: user.status,
     },
   });
 }

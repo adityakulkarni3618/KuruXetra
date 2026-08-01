@@ -9,6 +9,7 @@ interface User {
   uniqueId: string;
   fullName: string;
   role: "SUPER_ADMIN" | "CAPTAIN" | "STUDENT_ATHLETE" | "FITNESS_MEMBER";
+  status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED";
 }
 
 interface AuthContextType {

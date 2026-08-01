@@ -200,6 +200,15 @@ export default function ProfilePage() {
       <h1 className="font-display text-2xl font-bold mb-1">My Profile</h1>
       <p className="text-white/50 text-sm mb-8">Update your athlete details, profile photo, and college ID documents.</p>
 
+      {user?.status === "PENDING_APPROVAL" && (
+        <div className="bg-gold/10 border border-gold/30 text-gold text-sm rounded-lg px-4 py-3 mb-6">
+          <p className="font-semibold mb-1">Profile Approval Pending</p>
+          <p className="text-xs text-white/70">
+            Your profile is currently waiting for Sports Secretary approval. You can view/update your details here, but full features (sessions, workouts, runs, and sport teams) will unlock once approved.
+          </p>
+        </div>
+      )}
+
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
       {message && <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
 

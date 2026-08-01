@@ -3,7 +3,7 @@ import { verifyToken } from "../utils/jwt";
 import { prisma } from "../lib/prisma";
 
 export interface AuthedRequest extends Request {
-  user?: { id: string; role: string };
+  user?: { id: string; role: string; status: string };
 }
 
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -19,12 +19,17 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
     const user = await prisma.user.findUnique({ where: { id: payload.userId } });
     if (!user) return res.status(401).json({ error: "User no longer exists" });
     if (user.status === "SUSPENDED") return res.status(403).json({ error: "Account suspended" });
-    if (user.status === "PENDING_APPROVAL")
-      return res.status(403).json({ error: "Account is pending Sports Secretary approval" });
 
-    req.user = { id: user.id, role: user.role };
+    req.user = { id: user.id, role: user.role, status: user.status };
     next();
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+export function requireActive(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (req.user?.status !== "ACTIVE") {
+    return res.status(403).json({ error: "Your account is pending Sports Secretary approval" });
+  }
+  next();
 }
