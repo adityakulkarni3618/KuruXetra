@@ -129,6 +129,7 @@ export async function login(req: AuthedRequest, res: Response) {
     return res.status(403).json({ error: "Your account has been suspended" });
 
   const token = signToken({ userId: user.id, role: user.role });
+  const captainOf = await prisma.sport.findMany({ where: { captainId: user.id } });
   return res.json({
     token,
     user: {
@@ -137,6 +138,7 @@ export async function login(req: AuthedRequest, res: Response) {
       fullName: user.fullName,
       role: user.role,
       status: user.status,
+      captainOf,
     },
   });
 }

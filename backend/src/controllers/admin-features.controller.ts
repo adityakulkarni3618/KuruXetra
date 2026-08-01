@@ -137,3 +137,120 @@ export async function listMeetings(req: AuthedRequest, res: Response) {
   });
   res.json(meetings);
 }
+
+const createSessionSchema = z.object({
+  sportId: z.string().min(1),
+  title: z.string().min(2),
+  startTime: z.string().refine((val) => !Number.isNaN(Date.parse(val)), "Invalid datetime"),
+  workouts: z.array(z.object({
+    workoutTypeId: z.string().min(1),
+    rounds: z.boolean(),
+  })).min(1),
+});
+
+export async function createSession(req: AuthedRequest, res: Response) {
+  const parsed = createSessionSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
+  const { sportId, title, startTime, workouts } = parsed.data;
+
+  const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+  if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+  if (req.user!.role === "CAPTAIN" && sport.captainId !== req.user!.id && sport.viceCaptainId !== req.user!.id) {
+    return res.status(403).json({ error: "You can only create sessions for your own sport" });
+  }
+
+  const session = await prisma.session.create({
+    data: {
+      sportId,
+      title,
+      startTime: new Date(startTime),
+      workouts: {
+        create: workouts.map((w) => ({
+          workoutTypeId: w.workoutTypeId,
+          rounds: w.rounds,
+        })),
+      },
+    },
+    include: {
+      workouts: { include: { workoutType: true } },
+    },
+  });
+
+  res.status(201).json(session);
+}
+
+export async function listSessions(req: AuthedRequest, res: Response) {
+  const { sportId } = req.query as { sportId?: string };
+
+  const sessions = await prisma.session.findMany({
+    where: {
+      ...(sportId ? { sportId } : {}),
+    },
+    orderBy: { startTime: "desc" },
+    include: {
+      sport: true,
+      workouts: { include: { workoutType: true } },
+      athleteLogs: { include: { user: { select: { id: true, fullName: true, uniqueId: true } }, workoutType: true } },
+    },
+  });
+
+  res.json(sessions);
+}
+
+const logSessionWorkoutSchema = z.object({
+  workoutTypeId: z.string().min(1),
+  completed: z.boolean(),
+  value: z.number().optional(),
+});
+
+export async function logSessionWorkout(req: AuthedRequest, res: Response) {
+  const { sessionId } = req.params;
+  const parsed = logSessionWorkoutSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
+  const session = await prisma.session.findUnique({ where: { id: sessionId }, include: { sport: true } });
+  if (!session) return res.status(404).json({ error: "Session not found" });
+
+  // Verify athlete is approved member of the sport
+  const membership = await prisma.membership.findFirst({
+    where: { userId: req.user!.id, sportId: session.sportId, status: "APPROVED" },
+  });
+  if (!membership && req.user!.role !== "SUPER_ADMIN" && session.sport.captainId !== req.user!.id && session.sport.viceCaptainId !== req.user!.id) {
+    return res.status(403).json({ error: "You are not an approved member of this sport" });
+  }
+
+  // Find if log already exists
+  const existingLog = await prisma.athleteSessionLog.findFirst({
+    where: {
+      sessionId,
+      userId: req.user!.id,
+      workoutTypeId: parsed.data.workoutTypeId,
+    },
+  });
+
+  let log;
+  if (existingLog) {
+    log = await prisma.athleteSessionLog.update({
+      where: { id: existingLog.id },
+      data: {
+        completed: parsed.data.completed,
+        value: parsed.data.value,
+      },
+    });
+  } else {
+    log = await prisma.athleteSessionLog.create({
+      data: {
+        sessionId,
+        userId: req.user!.id,
+        workoutTypeId: parsed.data.workoutTypeId,
+        completed: parsed.data.completed,
+        value: parsed.data.value,
+      },
+    });
+  }
+
+  res.json(log);
+}
+

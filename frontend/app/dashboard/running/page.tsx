@@ -140,7 +140,7 @@ export default function RunningPage() {
           <div key={r.id} className="stat-card flex justify-between items-center">
             <div>
               <p className="font-medium">{r.distanceKm} km in {r.durationMin} min</p>
-              <p className="text-xs text-white/40">Pace: {r.paceMinKm?.toFixed(2)} min/km</p>
+              <p className="text-xs text-white/40">Pace: {r.paceMinKm ? (16.6667 / r.paceMinKm).toFixed(2) : "—"} m/s</p>
             </div>
             <span className="text-xs text-white/40">{new Date(r.createdAt).toLocaleDateString()}</span>
           </div>

@@ -7,6 +7,7 @@ export async function listSports(req: AuthedRequest, res: Response) {
   const sports = await prisma.sport.findMany({
     include: {
       captain: { select: { id: true, fullName: true, uniqueId: true } },
+      viceCaptain: { select: { id: true, fullName: true, uniqueId: true } },
       _count: { select: { memberships: true } },
     },
     orderBy: { name: "asc" },
@@ -222,4 +223,73 @@ export async function awardSportBadge(req: AuthedRequest, res: Response) {
     return res.status(500).json({ error: "Failed to award badge" });
   }
 }
+
+export async function assignViceCaptain(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // sportId
+  const { uniqueId, userId } = req.body as { uniqueId?: string; userId?: string };
+
+  const user = uniqueId
+    ? await prisma.user.findUnique({ where: { uniqueId } })
+    : userId
+    ? await prisma.user.findUnique({ where: { id: userId } })
+    : null;
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const sport = await prisma.sport.update({
+    where: { id },
+    data: { viceCaptainId: user.id },
+  });
+
+  // Promote to CAPTAIN role so they share Captain privileges
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { role: "CAPTAIN" },
+  });
+
+  res.json(sport);
+}
+
+export async function demoteViceCaptain(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // sportId
+
+  try {
+    const sport = await prisma.sport.findUnique({ where: { id } });
+    if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+    if (!sport.viceCaptainId) {
+      return res.status(400).json({ error: "Sport has no vice-captain assigned" });
+    }
+
+    const viceCaptainId = sport.viceCaptainId;
+
+    const sportUpdated = await prisma.sport.update({
+      where: { id },
+      data: { viceCaptainId: null },
+    });
+
+    // Demote role if they are no longer captain/vice-captain of any sport
+    const otherRoles = await prisma.sport.count({
+      where: {
+        OR: [{ captainId: viceCaptainId }, { viceCaptainId: viceCaptainId }],
+        NOT: { id },
+      },
+    });
+
+    if (otherRoles === 0) {
+      await prisma.user.update({
+        where: { id: viceCaptainId },
+        data: { role: "STUDENT_ATHLETE" },
+      });
+    }
+
+    res.json(sportUpdated);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to demote vice-captain" });
+  }
+}
+
 

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { prisma } from "./lib/prisma";
 
 import authRoutes from "./routes/auth.routes";
 import sportsRoutes from "./routes/sports.routes";
@@ -50,5 +51,33 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: "Internal server error" });
 });
 
+async function ensureBadgesSeeded() {
+  try {
+    const badges = [
+      { name: "100 Hours of Practice", isManual: false, description: "SUM(Workout.duration + RunningLog.duration) >= 100 hours all-time" },
+      { name: "Perfect Attendance", isManual: false, description: "Attendance % = 100 for a given Season (no missed sessions)" },
+      { name: "Most Consistent Player", isManual: false, description: "Highest attendance streak in a rolling 30-day window" },
+      { name: "Early Bird", isManual: false, description: "X check-ins logged before 7 AM" },
+      { name: "Iron Player", isManual: false, description: "N consecutive days with at least one logged activity" },
+      { name: "MVP", isManual: true, description: "Awarded by Captain per sport, per season/tournament" },
+      { name: "Champion", isManual: true, description: "Awarded by Sports Secretary (tournament-level)" },
+      { name: "Team Leader", isManual: true, description: "Awarded by Captain for recognition of a specific player" }
+    ];
+    for (const b of badges) {
+      await prisma.badge.upsert({
+        where: { name: b.name },
+        update: { description: b.description, isManual: b.isManual },
+        create: b,
+      });
+    }
+    console.log("SUCCESS: Default badges ensured in database.");
+  } catch (err) {
+    console.error("Error ensuring badges seeded:", err);
+  }
+}
+
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-app.listen(PORT, () => console.log(`KSMS backend running on http://localhost:${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`KSMS backend running on http://localhost:${PORT}`);
+  await ensureBadgesSeeded();
+});

@@ -11,28 +11,39 @@ export default function CaptainPage() {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [workoutTypes, setWorkoutTypes] = useState<any[]>([]);
   const [scheduleForm, setScheduleForm] = useState({ title: "", description: "", scheduledAt: "" });
   const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "" });
   const [meetingScores, setMeetingScores] = useState<Record<string, { userId: string; points: string }>>({});
   const [markForm, setMarkForm] = useState({ userId: "", ground: "" });
+  const [sessionForm, setSessionForm] = useState({
+    title: "",
+    startTime: "",
+    workouts: [] as { workoutTypeId: string; rounds: boolean }[],
+  });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   async function load() {
     const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-    const sport = sports.find((s: any) => s.captainId === me.id);
+    const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
     setMySport(sport);
     if (sport) {
-      const [m, a, ann, meet] = await Promise.all([
+      const [m, a, ann, meet, sess, types] = await Promise.all([
         api(`/api/sports/${sport.id}/members`),
         api(`/api/attendance/sport/${sport.id}`),
         api(`/api/admin-features/announcements?sportId=${sport.id}`),
         api(`/api/admin-features/meetings?sportId=${sport.id}`),
+        api(`/api/admin-features/sessions?sportId=${sport.id}`),
+        api("/api/admin-features/workout-types"),
       ]);
       setMembers(m);
       setAttendance(a);
       setAnnouncements(ann);
       setMeetings(meet);
+      setSessions(sess);
+      setWorkoutTypes(types.filter((t: any) => t.isActive));
     }
   }
   useEffect(() => { load(); }, []);
@@ -106,6 +117,54 @@ export default function CaptainPage() {
       setError(err.message);
     }
   }
+
+  const addWorkoutToForm = () => {
+    setSessionForm((prev) => ({
+      ...prev,
+      workouts: [...prev.workouts, { workoutTypeId: "", rounds: false }],
+    }));
+  };
+
+  const removeWorkoutFromForm = (index: number) => {
+    setSessionForm((prev) => ({
+      ...prev,
+      workouts: prev.workouts.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateWorkoutInForm = (index: number, field: string, val: any) => {
+    setSessionForm((prev) => {
+      const copy = [...prev.workouts];
+      copy[index] = { ...copy[index], [field]: val };
+      return { ...prev, workouts: copy };
+    });
+  };
+
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (sessionForm.workouts.length === 0) {
+      setError("Please add at least one workout to the session.");
+      return;
+    }
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/admin-features/sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          sportId: mySport.id,
+          title: sessionForm.title,
+          startTime: sessionForm.startTime,
+          workouts: sessionForm.workouts,
+        }),
+      });
+      setSessionForm({ title: "", startTime: "", workouts: [] });
+      setMessage("Training session created successfully.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
   async function scheduleMeeting(e: React.FormEvent) {
     e.preventDefault();
@@ -366,6 +425,84 @@ export default function CaptainPage() {
         {meetings.length === 0 && <p className="text-sm text-white/40">No meetings scheduled yet.</p>}
       </div>
 
+      <div className="stat-card mb-10">
+        <h2 className="font-display font-semibold mb-3">Create Training Session</h2>
+        <form onSubmit={handleCreateSession} className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="label">Session Title</span>
+              <input
+                className="input-field"
+                value={sessionForm.title}
+                onChange={(e) => setSessionForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g. Morning Conditioning"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="label">Start Time</span>
+              <input
+                className="input-field"
+                type="datetime-local"
+                value={sessionForm.startTime}
+                onChange={(e) => setSessionForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="border-t border-white/5 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <span className="label text-white/80">Workout Items</span>
+              <button
+                type="button"
+                onClick={addWorkoutToForm}
+                className="text-xs text-gold border border-gold/20 bg-gold/10 px-2.5 py-1 rounded hover:bg-gold/20 transition-all"
+              >
+                + Add Workout
+              </button>
+            </div>
+
+            {sessionForm.workouts.map((w, index) => (
+              <div key={index} className="flex gap-4 items-end bg-surface p-3 rounded-lg border border-white/5 mb-2">
+                <label className="block flex-1">
+                  <span className="label text-xs">Workout Type</span>
+                  <select
+                    className="input-field text-xs"
+                    value={w.workoutTypeId}
+                    onChange={(e) => updateWorkoutInForm(index, "workoutTypeId", e.target.value)}
+                    required
+                  >
+                    <option value="">Choose workout type</option>
+                    {workoutTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 pb-3.5">
+                  <input
+                    type="checkbox"
+                    checked={w.rounds}
+                    onChange={(e) => updateWorkoutInForm(index, "rounds", e.target.checked)}
+                    className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
+                  />
+                  <span className="text-xs text-white/60">Track Rounds</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => removeWorkoutFromForm(index)}
+                  className="text-xs text-red-400 hover:text-red-300 pb-3"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button type="submit" className="btn-gold mt-4 w-full">Create Training Session</button>
+        </form>
+      </div>
+
       <div className="stat-card mb-6">
         <h2 className="font-display font-semibold mb-3">Mark athlete attendance</h2>
         <form onSubmit={markAthleteAttendance} className="grid md:grid-cols-3 gap-4 items-end">
@@ -394,6 +531,46 @@ export default function CaptainPage() {
           </label>
           <button type="submit" className="btn-gold">Mark present</button>
         </form>
+      </div>
+
+      <h2 className="font-display font-semibold mb-3">Training Sessions Log</h2>
+      <div className="space-y-4 mb-10">
+        {sessions.map((sess) => (
+          <div key={sess.id} className="stat-card">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-display font-semibold text-white">{sess.title}</h3>
+                <p className="text-xs text-white/40">Scheduled for {new Date(sess.startTime).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="mt-4 border-t border-white/5 pt-3">
+              <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Workout Items</p>
+              <ul className="list-disc pl-5 space-y-1 text-sm text-white/70">
+                {sess.workouts.map((w: any) => (
+                  <li key={w.id}>
+                    {w.workoutType.name} {w.rounds ? "(Rounds tracked)" : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {sess.athleteLogs?.length > 0 && (
+              <div className="mt-4 border-t border-white/5 pt-3">
+                <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Athlete Submissions</p>
+                <div className="space-y-1.5 text-xs text-white/70">
+                  {sess.athleteLogs.map((log: any) => (
+                    <div key={log.id} className="flex justify-between border-b border-white/5 py-1">
+                      <span>{log.user.fullName} ({log.workoutType.name})</span>
+                      <span className="text-gold">
+                        {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {sessions.length === 0 && <p className="text-sm text-white/40">No training sessions created yet.</p>}
       </div>
 
       <h2 className="font-display font-semibold mb-3">Recent team attendance</h2>
