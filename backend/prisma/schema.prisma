@@ -53,9 +53,11 @@ model User {
   roleChangeLogs    RoleChangeLog[] @relation("UserRoleChanges")
   runs              RunningLog[]
   captainOf         Sport[]         @relation("SportCaptain")
+  viceCaptainOf     Sport[]         @relation("SportViceCaptain")
   scheduledMeetings TeamMeeting[]   @relation("UserScheduledMeetings")
   workouts          Workout[]
   badges            UserBadge[]
+  athleteSessionLogs AthleteSessionLog[]
 }
 
 model Sport {
@@ -70,13 +72,16 @@ model Sport {
   status        String         @default("ACTIVE")
   isActive      Boolean        @default(true)
   captainId     String?
+  viceCaptainId String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   announcements Announcement[]
   attendance    Attendance[]
   memberships   Membership[]
   captain       User?          @relation("SportCaptain", fields: [captainId], references: [id])
+  viceCaptain   User?          @relation("SportViceCaptain", fields: [viceCaptainId], references: [id])
   meetings      TeamMeeting[]
+  sessions      Session[]
 }
 
 model WorkoutType {
@@ -87,6 +92,41 @@ model WorkoutType {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   workouts  Workout[]
+  sessionWorkouts SessionWorkout[]
+  athleteSessionLogs AthleteSessionLog[]
+}
+
+model Session {
+  id          String              @id @default(cuid())
+  sportId     String
+  title       String
+  startTime   DateTime
+  createdAt   DateTime            @default(now())
+  sport       Sport               @relation(fields: [sportId], references: [id])
+  workouts    SessionWorkout[]
+  athleteLogs AthleteSessionLog[]
+}
+
+model SessionWorkout {
+  id            String      @id @default(cuid())
+  sessionId     String
+  workoutTypeId String
+  rounds        Boolean     @default(false)
+  session       Session     @relation(fields: [sessionId], references: [id])
+  workoutType   WorkoutType @relation(fields: [workoutTypeId], references: [id])
+}
+
+model AthleteSessionLog {
+  id            String      @id @default(cuid())
+  sessionId     String
+  userId        String
+  workoutTypeId String
+  completed     Boolean     @default(false)
+  value         Float?
+  createdAt     DateTime    @default(now())
+  session       Session     @relation(fields: [sessionId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  workoutType   WorkoutType @relation(fields: [workoutTypeId], references: [id])
 }
 
 model MeetingScore {

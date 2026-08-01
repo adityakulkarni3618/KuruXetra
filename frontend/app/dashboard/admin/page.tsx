@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
@@ -532,35 +533,36 @@ export default function AdminPage() {
       <h2 className="font-display font-semibold mb-3">Manage Sports</h2>
       <div className="grid md:grid-cols-2 gap-4 mb-10">
         {sports.map((s) => (
-          <div key={s.id} className="stat-card">
-            <h3 className="font-display font-semibold">{s.name}</h3>
-            <p className="text-xs text-white/40 mb-3">{s._count?.memberships ?? 0} members · {s.status}</p>
-            <div className="text-xs text-white/50 mb-2 flex items-center justify-between gap-2">
-              <span>Captain: {s.captain ? s.captain.fullName : "Unassigned"}</span>
-              {s.captain && (
-                <button
-                  onClick={() => removeCaptain(s.id)}
-                  className="text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded transition-colors"
-                  type="button"
-                >
-                  Remove Captain
-                </button>
-              )}
+          <div key={s.id} className="stat-card flex flex-col justify-between">
+            <div>
+              <h3 className="font-display font-semibold">{s.name}</h3>
+              <p className="text-xs text-white/40 mb-3">{s._count?.memberships ?? 0} members · {s.status}</p>
+              <div className="text-xs text-white/50 mb-2 flex items-center justify-between gap-2">
+                <span>Captain: {s.captain ? s.captain.fullName : "Unassigned"}</span>
+                {s.viceCaptain && <span className="ml-2">Vice-Captain: {s.viceCaptain.fullName}</span>}
+              </div>
             </div>
-            <AssignCaptainForm sportId={s.id} onAssign={assignCaptain} />
-            <div className="flex items-center justify-between mt-3 border-t border-white/5 pt-3">
-              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${s.isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}`}>
-                {s.isActive ? "Active" : "Inactive"}
-              </span>
-              {s.isActive && (
-                <button
-                  onClick={() => deactivateSport(s.id)}
-                  className="text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-2.5 py-1 rounded transition-all"
-                  type="button"
-                >
-                  Deactivate Sport
-                </button>
-              )}
+            <div>
+              <div className="flex items-center justify-between mt-3 border-t border-white/5 pt-3">
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${s.isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}`}>
+                  {s.isActive ? "Active" : "Inactive"}
+                </span>
+                {s.isActive && (
+                  <button
+                    onClick={() => deactivateSport(s.id)}
+                    className="text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-2.5 py-1 rounded transition-all"
+                    type="button"
+                  >
+                    Deactivate Sport
+                  </button>
+                )}
+              </div>
+              <Link
+                href={`/dashboard/admin/sports/${s.id}`}
+                className="btn-gold text-xs px-3.5 py-2 mt-4 block text-center font-medium"
+              >
+                Manage Captain, Vice-Captain & roster &rarr;
+              </Link>
             </div>
           </div>
         ))}

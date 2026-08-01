@@ -8,16 +8,39 @@ const empty = { workoutTypeId: "", exercise: "", sets: "", reps: "", weightKg: "
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [types, setTypes] = useState<any[]>([]);
+  const [me, setMe] = useState<any>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [roundsForm, setRoundsForm] = useState<Record<string, string>>({});
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    const [w, t] = await Promise.all([api("/api/workouts/me"), api("/api/admin-features/workout-types")]);
+    const [w, t, m, s] = await Promise.all([
+      api("/api/workouts/me"),
+      api("/api/admin-features/workout-types"),
+      api("/api/auth/me"),
+      api("/api/admin-features/sessions"),
+    ]);
     setWorkouts(w);
     setTypes(t.filter((type: any) => type.isActive));
+    setMe(m);
+    setSessions(s);
   }
   useEffect(() => { load(); }, []);
+
+  async function submitSessionLog(sessionId: string, workoutTypeId: string, completed: boolean, value?: number) {
+    setError("");
+    try {
+      await api(`/api/admin-features/sessions/${sessionId}/logs`, {
+        method: "POST",
+        body: JSON.stringify({ workoutTypeId, completed, value }),
+      });
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
 
   const selectedType = types.find((type) => type.id === form.workoutTypeId);
 
@@ -40,12 +63,82 @@ export default function WorkoutsPage() {
     }
   }
 
+  const mySportIds = new Set((me?.memberships || []).filter((ms: any) => ms.status === "APPROVED").map((ms: any) => ms.sportId));
+  const activeSessions = sessions.filter((sess) => mySportIds.has(sess.sportId));
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-1">Workouts</h1>
       <p className="text-white/50 text-sm mb-8">Log a workout from the approved workout type list.</p>
 
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
+
+      {activeSessions.length > 0 && (
+        <div className="space-y-4 mb-8">
+          <h2 className="font-display font-semibold mb-3">Active Training Sessions</h2>
+          {activeSessions.map((sess) => (
+            <div key={sess.id} className="stat-card bg-surface/50 border border-white/5">
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <div>
+                  <h3 className="font-display font-semibold text-gold">{sess.title}</h3>
+                  <p className="text-xs text-white/40">Sport: {sess.sport?.name} · Starts: {new Date(sess.startTime).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-3">
+                {sess.workouts.map((w: any) => {
+                  const myLog = sess.athleteLogs?.find((log: any) => log.userId === me?.id && log.workoutTypeId === w.workoutTypeId);
+                  return (
+                    <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-3 rounded-lg border border-white/5 text-sm">
+                      <div>
+                        <span className="font-medium text-white">{w.workoutType.name}</span>
+                        {w.rounds && <span className="text-xs text-gold ml-2">(Rounds tracked)</span>}
+                        {myLog && (
+                          <span className="text-xs text-green-400 ml-2">
+                            ✓ {myLog.value !== null && myLog.value !== undefined ? `Logged ${myLog.value} rounds` : "Completed"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {w.rounds ? (
+                          <>
+                            <input
+                              type="number"
+                              className="input-field text-xs py-1.5 px-3 max-w-[80px]"
+                              placeholder="Rounds"
+                              value={roundsForm[`${sess.id}_${w.workoutTypeId}`] || (myLog?.value !== null && myLog?.value !== undefined ? String(myLog.value) : "")}
+                              onChange={(e) => setRoundsForm({ ...roundsForm, [`${sess.id}_${w.workoutTypeId}`]: e.target.value })}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const val = roundsForm[`${sess.id}_${w.workoutTypeId}`];
+                                submitSessionLog(sess.id, w.workoutTypeId, true, val ? Number(val) : undefined);
+                              }}
+                              className="btn-gold text-xs px-3 py-1.5"
+                            >
+                              Log Rounds
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => submitSessionLog(sess.id, w.workoutTypeId, !myLog?.completed)}
+                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                              myLog?.completed ? "bg-green-600 hover:bg-green-500 text-white" : "btn-gold"
+                            }`}
+                          >
+                            {myLog?.completed ? "Completed (Undo)" : "Mark Completed"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <form onSubmit={submit} className="stat-card grid md:grid-cols-3 gap-4 mb-8">
         <label className="block md:col-span-3">

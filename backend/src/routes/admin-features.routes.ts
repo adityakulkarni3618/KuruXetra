@@ -10,6 +10,9 @@ import {
   scheduleMeeting,
   scoreMeeting,
   listMeetings,
+  createSession,
+  listSessions,
+  logSessionWorkout,
 } from "../controllers/admin-features.controller";
 
 const router = Router();
@@ -24,5 +27,9 @@ router.post("/announcements", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN")
 router.get("/meetings", requireAuth, listMeetings);
 router.post("/meetings", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), scheduleMeeting);
 router.post("/meetings/:meetingId/scores", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), scoreMeeting);
+
+router.get("/sessions", requireAuth, listSessions);
+router.post("/sessions", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), createSession);
+router.post("/sessions/:sessionId/logs", requireAuth, logSessionWorkout);
 
 export default router;

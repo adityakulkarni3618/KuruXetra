@@ -44,8 +44,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : [...baseNav];
 
   if (user.status !== "PENDING_APPROVAL") {
-    if (user.role === "CAPTAIN") nav.push({ href: "/dashboard/captain", label: "My Team" });
-    if (user.role === "SUPER_ADMIN") nav.push({ href: "/dashboard/admin", label: "Admin" });
+    if (user.role === "CAPTAIN" || (user.captainOf && user.captainOf.length > 0)) {
+      nav.push({ href: "/dashboard/captain", label: "My Team" });
+    }
+    if (user.role === "SUPER_ADMIN") {
+      nav.push({ href: "/dashboard/admin", label: "Admin" });
+    }
   }
 
   return (
