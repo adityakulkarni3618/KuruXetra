@@ -11,9 +11,12 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    const [a, s] = await Promise.all([api("/api/attendance/me"), api("/api/sports")]);
+    const [a, me] = await Promise.all([api("/api/attendance/me"), api("/api/auth/me")]);
     setRecords(a);
-    setSports(s);
+    const approvedSports = (me.memberships ?? [])
+      .filter((m: any) => m.status === "APPROVED")
+      .map((m: any) => m.sport);
+    setSports(approvedSports);
   }
 
   useEffect(() => {

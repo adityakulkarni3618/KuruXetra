@@ -9,6 +9,15 @@ export async function checkIn(req: AuthedRequest, res: Response) {
   const userId = req.user!.id;
   const { sportId, ground } = req.body as { sportId?: string; ground?: string };
 
+  if (sportId) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId, sportId, status: "APPROVED" },
+    });
+    if (!membership) {
+      return res.status(403).json({ error: "You can only check in for sports you're an approved member of" });
+    }
+  }
+
   const openEntry = await prisma.attendance.findFirst({
     where: { userId, timeOut: null },
     orderBy: { timeIn: "desc" },
