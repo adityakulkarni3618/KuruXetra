@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 import { awardPoints, POINTS } from "../utils/points";
+import { checkAndAwardBadges } from "../utils/badgeChecker";
 
 const runSchema = z.object({
   distanceKm: z.number().positive().optional(),
@@ -50,6 +51,7 @@ export async function logRun(req: AuthedRequest, res: Response) {
     },
   });
   await awardPoints(req.user!.id, POINTS.RUNNING, "RUNNING", run.id);
+  await checkAndAwardBadges(req.user!.id);
   res.status(201).json(run);
 }
 

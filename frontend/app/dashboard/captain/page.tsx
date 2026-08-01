@@ -66,6 +66,22 @@ export default function CaptainPage() {
     }
   }
 
+  async function awardBadge(userId: string, badgeName: "MVP" | "Team Leader") {
+    if (!confirm(`Are you sure you want to award the ${badgeName} badge to this athlete?`)) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/sports/${mySport.id}/award-badge`, {
+        method: "POST",
+        body: JSON.stringify({ userId, badgeName }),
+      });
+      setMessage(`${badgeName} badge awarded successfully.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   async function scheduleMeeting(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -170,13 +186,29 @@ export default function CaptainPage() {
               <p className="font-medium">{m.user.fullName}</p>
               <p className="text-xs text-white/40">{m.user.uniqueId} · {m.user.department}</p>
             </div>
-            <button
-              onClick={() => removeMember(m.id)}
-              className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
-              type="button"
-            >
-              Remove from Team
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => awardBadge(m.user.id, "MVP")}
+                className="btn-primary bg-purple-600 hover:bg-purple-500 text-xs px-3 py-1.5"
+                type="button"
+              >
+                Award MVP
+              </button>
+              <button
+                onClick={() => awardBadge(m.user.id, "Team Leader")}
+                className="btn-primary bg-blue-600 hover:bg-blue-500 text-xs px-3 py-1.5"
+                type="button"
+              >
+                Award Team Leader
+              </button>
+              <button
+                onClick={() => removeMember(m.id)}
+                className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
+                type="button"
+              >
+                Remove from Team
+              </button>
+            </div>
           </div>
         ))}
         {approved.length === 0 && <p className="text-sm text-white/40">No approved members yet.</p>}

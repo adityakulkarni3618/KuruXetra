@@ -55,6 +55,7 @@ model User {
   captainOf         Sport[]         @relation("SportCaptain")
   scheduledMeetings TeamMeeting[]   @relation("UserScheduledMeetings")
   workouts          Workout[]
+  badges            UserBadge[]
 }
 
 model Sport {
@@ -67,6 +68,7 @@ model Sport {
   practiceTime  String?
   maxMembers    Int?
   status        String         @default("ACTIVE")
+  isActive      Boolean        @default(true)
   captainId     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -232,4 +234,25 @@ enum UserStatus {
   PENDING_APPROVAL
   ACTIVE
   SUSPENDED
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  isManual    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  awards      UserBadge[]
+}
+
+model UserBadge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  badgeId     String
+  badge       Badge    @relation(fields: [badgeId], references: [id])
+  awardedById String?
+  earnedAt    DateTime @default(now())
+
+  @@unique([userId, badgeId])
 }

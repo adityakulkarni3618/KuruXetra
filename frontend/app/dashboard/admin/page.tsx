@@ -169,6 +169,72 @@ export default function AdminPage() {
     }
   }
 
+  async function toggleStatus(userId: string, currentStatus: string) {
+    const nextStatus = currentStatus === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
+    if (!confirm(`Are you sure you want to change this user's status to ${nextStatus}?`)) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${userId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      setMessage(`User status updated to ${nextStatus}.`);
+      await load();
+      if (searchResults.length > 0) {
+        await searchUsers();
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function resetPassword(userId: string) {
+    if (!confirm("Are you sure you want to reset this user's password? A temporary password will be generated.")) return;
+    setError("");
+    setMessage("");
+    try {
+      const data = await api(`/api/admin/users/${userId}/reset-password`, {
+        method: "POST",
+      });
+      alert(`Temporary Password: ${data.tempPassword}\n\nPlease relay this temporary password to the student once. It will not be shown again.`);
+      setMessage(`Temporary password generated: ${data.tempPassword}`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function awardChampion(userId: string) {
+    if (!confirm("Are you sure you want to award the Champion badge to this user?")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${userId}/award-badge`, {
+        method: "POST",
+      });
+      setMessage("Champion badge awarded successfully.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function deactivateSport(sportId: string) {
+    if (!confirm("Are you sure you want to deactivate this sport? It will be hidden from new join requests, but historical data is preserved.")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/sports/${sportId}/deactivate`, {
+        method: "PATCH",
+      });
+      setMessage("Sport deactivated successfully.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   async function createWorkoutType(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -394,6 +460,32 @@ export default function AdminPage() {
                     )
                   )}
                   {currentUser?.id !== user.id && user.uniqueId !== "KX000001" && (
+                    <>
+                      <button
+                        onClick={() => toggleStatus(user.id, user.status)}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                          user.status === "SUSPENDED" ? "bg-green-600 hover:bg-green-500 text-white" : "bg-orange-600 hover:bg-orange-500 text-white"
+                        }`}
+                      >
+                        {user.status === "SUSPENDED" ? "Activate Account" : "Suspend Account"}
+                      </button>
+                      <button
+                        onClick={() => resetPassword(user.id)}
+                        className="btn-primary bg-blue-600 hover:bg-blue-500 text-xs px-3 py-1.5"
+                      >
+                        Reset Password
+                      </button>
+                    </>
+                  )}
+                  {user.status === "ACTIVE" && (
+                    <button
+                      onClick={() => awardChampion(user.id)}
+                      className="btn-primary bg-purple-600 hover:bg-purple-500 text-xs px-3 py-1.5"
+                    >
+                      Award Champion Badge
+                    </button>
+                  )}
+                  {currentUser?.id !== user.id && user.uniqueId !== "KX000001" && (
                     <button
                       onClick={() => removeProfile(user.id)}
                       className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
@@ -456,6 +548,20 @@ export default function AdminPage() {
               )}
             </div>
             <AssignCaptainForm sportId={s.id} onAssign={assignCaptain} />
+            <div className="flex items-center justify-between mt-3 border-t border-white/5 pt-3">
+              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${s.isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}`}>
+                {s.isActive ? "Active" : "Inactive"}
+              </span>
+              {s.isActive && (
+                <button
+                  onClick={() => deactivateSport(s.id)}
+                  className="text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-2.5 py-1 rounded transition-all"
+                  type="button"
+                >
+                  Deactivate Sport
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

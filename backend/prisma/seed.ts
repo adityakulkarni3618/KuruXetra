@@ -36,8 +36,28 @@ async function main() {
     });
   }
 
+  const badges = [
+    { name: "100 Hours of Practice", isManual: false, description: "SUM(Workout.duration + RunningLog.duration) >= 100 hours all-time" },
+    { name: "Perfect Attendance", isManual: false, description: "Attendance % = 100 for a given Season (no missed sessions)" },
+    { name: "Most Consistent Player", isManual: false, description: "Highest attendance streak in a rolling 30-day window" },
+    { name: "Early Bird", isManual: false, description: "X check-ins logged before 7 AM" },
+    { name: "Iron Player", isManual: false, description: "N consecutive days with at least one logged activity" },
+    { name: "MVP", isManual: true, description: "Awarded by Captain per sport, per season/tournament" },
+    { name: "Champion", isManual: true, description: "Awarded by Sports Secretary (tournament-level)" },
+    { name: "Team Leader", isManual: true, description: "Awarded by Captain for recognition of a specific player" }
+  ];
+
+  for (const b of badges) {
+    await prisma.badge.upsert({
+      where: { name: b.name },
+      update: { description: b.description, isManual: b.isManual },
+      create: b,
+    });
+  }
+
   console.log("Seeded super admin:", admin.uniqueId, "/ password: SSSS@123");
   console.log("Seeded sports:", sports.join(", "));
+  console.log("Seeded badges:", badges.map((b) => b.name).join(", "));
 }
 
 main()

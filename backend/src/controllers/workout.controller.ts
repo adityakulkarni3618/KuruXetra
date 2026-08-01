@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 import { awardPoints, POINTS } from "../utils/points";
+import { checkAndAwardBadges } from "../utils/badgeChecker";
 
 const workoutSchema = z.object({
   workoutTypeId: z.string().min(1),
@@ -43,6 +44,7 @@ export async function logWorkout(req: AuthedRequest, res: Response) {
     },
   });
   await awardPoints(req.user!.id, workoutType.points, "WORKOUT", workout.id);
+  await checkAndAwardBadges(req.user!.id);
   res.status(201).json(workout);
 }
 

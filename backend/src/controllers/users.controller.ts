@@ -35,3 +35,21 @@ export async function listUsers(req: AuthedRequest, res: Response) {
   });
   res.json(users);
 }
+
+export async function getUserBadges(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const userBadges = await prisma.userBadge.findMany({
+      where: { userId: id },
+      include: {
+        badge: true,
+      },
+      orderBy: { earnedAt: "desc" },
+    });
+    res.json(userBadges);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to load user badges" });
+  }
+}

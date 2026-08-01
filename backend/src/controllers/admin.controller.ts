@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
+import bcrypt from "bcryptjs";
 
 export async function searchUsers(req: AuthedRequest, res: Response) {
   const { uniqueId, name, rollNumber, department, academicYear, passoutYear } = req.query as {
@@ -177,6 +178,79 @@ export async function deleteUserPermanently(req: AuthedRequest, res: Response) {
   } catch (error: any) {
     console.error(error);
     return res.status(500).json({ error: "Failed to permanently remove user" });
+  }
+}
+
+export async function awardChampionBadge(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // userId
+  const actorId = req.user!.id;
+
+  try {
+    const badge = await prisma.badge.findUnique({ where: { name: "Champion" } });
+    if (!badge) return res.status(404).json({ error: "Champion badge not found in database. Run seed first." });
+
+    const userBadge = await prisma.userBadge.upsert({
+      where: { userId_badgeId: { userId: id, badgeId: badge.id } },
+      update: { awardedById: actorId },
+      create: { userId: id, badgeId: badge.id, awardedById: actorId },
+    });
+
+    return res.json({ message: "Champion badge awarded successfully", userBadge });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to award Champion badge" });
+  }
+}
+
+export async function toggleUserStatus(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+  const { status } = req.body as { status: "ACTIVE" | "SUSPENDED" };
+
+  if (!["ACTIVE", "SUSPENDED"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status. Must be ACTIVE or SUSPENDED." });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { status },
+    });
+    return res.json({ message: `User status changed to ${status}`, user: { id: user.id, status: user.status } });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to change user status" });
+  }
+}
+
+export async function resetUserPassword(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+  const tempPassword = "TMP-" + Math.floor(100000 + Math.random() * 900000);
+
+  try {
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+    return res.json({ message: "Password reset successfully", tempPassword });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to reset password" });
+  }
+}
+
+export async function deactivateSport(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // sportId
+
+  try {
+    const sport = await prisma.sport.update({
+      where: { id },
+      data: { isActive: false },
+    });
+    return res.json({ message: "Sport deactivated successfully", sport });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to deactivate sport" });
   }
 }
 

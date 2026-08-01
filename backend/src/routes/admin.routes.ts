@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
-import { searchUsers, promoteToSportsSecretary, demoteFromSportsSecretary, deleteUserPermanently } from "../controllers/admin.controller";
+import { searchUsers, promoteToSportsSecretary, demoteFromSportsSecretary, deleteUserPermanently, awardChampionBadge, toggleUserStatus, resetUserPassword, deactivateSport } from "../controllers/admin.controller";
 import { prisma } from "../lib/prisma";
 import { Response } from "express";
 import { AuthedRequest } from "../middleware/auth";
@@ -67,6 +67,10 @@ router.get("/users/search", searchUsers);
 router.post("/users/:id/promote-to-ss", promoteToSportsSecretary);
 router.post("/users/:id/demote-from-ss", demoteFromSportsSecretary);
 router.delete("/users/:id/remove-profile", deleteUserPermanently);
+router.post("/users/:id/award-badge", awardChampionBadge);
+router.patch("/users/:id/status", toggleUserStatus);
+router.post("/users/:id/reset-password", resetUserPassword);
+router.patch("/sports/:id/deactivate", deactivateSport);
 
 export default router;
 
