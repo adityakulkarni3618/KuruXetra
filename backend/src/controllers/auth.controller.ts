@@ -57,16 +57,26 @@ export async function register(req: AuthedRequest, res: Response) {
   const uniqueId = await generateUniqueId(data.rollNumber);
   const isFirstUser = (await prisma.user.count()) === 0;
 
-  const user = await prisma.user.create({
-    data: {
-      ...data,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
-      passwordHash,
-      uniqueId,
-      role: isFirstUser ? "SUPER_ADMIN" : "STUDENT_ATHLETE",
-      status: isFirstUser ? "ACTIVE" : "PENDING_APPROVAL",
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        ...data,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        passwordHash,
+        uniqueId,
+        role: isFirstUser ? "SUPER_ADMIN" : "STUDENT_ATHLETE",
+        status: isFirstUser ? "ACTIVE" : "PENDING_APPROVAL",
+      },
+    });
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return res.status(409).json({
+        error: "This roll number is already registered. If this seems wrong, contact your Sports Secretary.",
+      });
+    }
+    throw err;
+  }
 
   if (preferredSports && preferredSports.length > 0) {
     const sports = await prisma.sport.findMany({
