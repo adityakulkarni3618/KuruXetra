@@ -181,3 +181,45 @@ export async function removeTeamMember(req: AuthedRequest, res: Response) {
   }
 }
 
+export async function awardSportBadge(req: AuthedRequest, res: Response) {
+  const { sportId } = req.params;
+  const { userId, badgeName } = req.body as { userId: string; badgeName: "MVP" | "Team Leader" };
+  const actorId = req.user!.id;
+
+  if (!["MVP", "Team Leader"].includes(badgeName)) {
+    return res.status(400).json({ error: "Invalid badge. Only MVP or Team Leader can be manually awarded by captains." });
+  }
+
+  try {
+    const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+    if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+    // Restrict to captain of the sport
+    if (req.user!.role === "CAPTAIN" && sport.captainId !== actorId) {
+      return res.status(403).json({ error: "You can only award badges to athletes on your own team." });
+    }
+
+    // Verify user is an approved member of the sport
+    const membership = await prisma.membership.findFirst({
+      where: { userId, sportId, status: "APPROVED" },
+    });
+    if (!membership) {
+      return res.status(400).json({ error: "User is not an approved member of this sport." });
+    }
+
+    const badge = await prisma.badge.findUnique({ where: { name: badgeName } });
+    if (!badge) return res.status(404).json({ error: `${badgeName} badge not found in database. Run seed first.` });
+
+    const userBadge = await prisma.userBadge.upsert({
+      where: { userId_badgeId: { userId, badgeId: badge.id } },
+      update: { awardedById: actorId },
+      create: { userId, badgeId: badge.id, awardedById: actorId },
+    });
+
+    return res.json({ message: `Badge ${badgeName} awarded successfully`, userBadge });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to award badge" });
+  }
+}
+

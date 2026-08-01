@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 import { awardPoints, POINTS } from "../utils/points";
+import { checkAndAwardBadges } from "../utils/badgeChecker";
 
 // Digital replacement for the physical register: a student checks in when
 // they arrive on the ground.
@@ -29,6 +30,7 @@ export async function checkIn(req: AuthedRequest, res: Response) {
   });
 
   await awardPoints(userId, POINTS.ATTENDANCE, "ATTENDANCE", entry.id);
+  await checkAndAwardBadges(userId);
   res.status(201).json(entry);
 }
 
@@ -48,6 +50,7 @@ export async function checkOut(req: AuthedRequest, res: Response) {
     where: { id: openEntry.id },
     data: { timeOut, durationMin },
   });
+  await checkAndAwardBadges(userId);
   res.json(updated);
 }
 
@@ -66,6 +69,7 @@ export async function markAttendance(req: AuthedRequest, res: Response) {
     data: { userId, sportId, ground, timeIn: new Date(), markedBy: req.user!.id },
   });
   await awardPoints(userId, POINTS.ATTENDANCE, "ATTENDANCE", entry.id);
+  await checkAndAwardBadges(userId);
   res.status(201).json(entry);
 }
 

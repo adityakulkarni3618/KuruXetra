@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [badges, setBadges] = useState<any[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -59,6 +60,9 @@ export default function ProfilePage() {
         setCollegeIdUrl(me.collegeIdUrl || "");
         setProfilePreview(me.profilePhotoUrl || "");
         setIdPreview(me.collegeIdUrl || "");
+
+        const bList = await api(`/api/users/${me.id}/badges`);
+        setBadges(bList);
       } catch (err: any) {
         setError(err.message || "Failed to load profile");
       }
@@ -296,6 +300,25 @@ export default function ProfilePage() {
             Upload college ID
           </button>
         </div>
+      </div>
+
+      <h2 className="font-display font-semibold mt-10 mb-4">My Badges ({badges.length})</h2>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+        {badges.map((ub) => (
+          <div key={ub.id} className="stat-card border border-gold/10 hover:border-gold/30 transition-all flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-gold text-base">{ub.badge.name}</p>
+              <span className="text-[10px] text-white/30">{new Date(ub.earnedAt).toLocaleDateString()}</span>
+            </div>
+            <p className="text-xs text-white/60 flex-1">{ub.badge.description || "No description provided."}</p>
+            {ub.awardedById && (
+              <p className="text-[10px] text-white/30 italic mt-1">Awarded manually by Captain/Admin</p>
+            )}
+          </div>
+        ))}
+        {badges.length === 0 && (
+          <p className="text-sm text-white/40 md:col-span-3">You haven't earned any badges yet. Keep practicing!</p>
+        )}
       </div>
     </div>
   );

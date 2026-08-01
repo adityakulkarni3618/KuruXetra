@@ -38,7 +38,7 @@ export default function SportsPage() {
       {message && <div className="bg-blue/10 border border-blue/30 text-blue-light text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
 
       <div className="grid md:grid-cols-2 gap-4">
-        {sports.map((s) => {
+        {sports.filter((s) => s.isActive !== false).map((s) => {
           const joined = myMembershipIds.has(s.id);
           return (
             <div key={s.id} className="stat-card">
