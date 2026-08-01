@@ -44,6 +44,8 @@ model User {
   collegeIdUrl      String?
   passoutYear       Int?
   priorRole         Role?
+  resetOtp          String?
+  resetOtpExpires   DateTime?
   announcements     Announcement[]
   attendance        Attendance[]
   meetingScores     MeetingScore[]  @relation("UserMeetingScores")
