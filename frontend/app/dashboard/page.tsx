@@ -10,12 +10,14 @@ export default function OverviewPage() {
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [runs, setRuns] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [me, setMe] = useState<any>(null);
 
   useEffect(() => {
     api("/api/attendance/me").then(setAttendance).catch(() => {});
     api("/api/workouts/me").then(setWorkouts).catch(() => {});
     api("/api/running/me").then(setRuns).catch(() => {});
     api("/api/leaderboard").then(setLeaderboard).catch(() => {});
+    api("/api/auth/me").then(setMe).catch(() => {});
   }, []);
 
   const myRank = leaderboard.find((r) => r.id === user?.id);
@@ -29,7 +31,7 @@ export default function OverviewPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Stat label="Leaderboard rank" value={myRank ? `#${myRank.rank}` : "—"} />
-        <Stat label="Total points" value={myRank ? myRank.points : 0} />
+        <Stat label="Total points" value={me ? me.totalPoints : 0} />
         <Stat label="Total runs" value={runs.length} />
         <Stat label="Distance logged" value={`${totalDistance.toFixed(1)} km`} />
       </div>

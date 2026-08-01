@@ -149,6 +149,15 @@ export async function me(req: AuthedRequest, res: Response) {
     },
   });
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  const pointsSum = await prisma.pointsLedger.aggregate({
+    where: { userId: req.user!.id },
+    _sum: { points: true },
+  });
+
   const { passwordHash, ...safeUser } = user;
-  return res.json(safeUser);
+  return res.json({
+    ...safeUser,
+    totalPoints: pointsSum._sum.points || 0,
+  });
 }
