@@ -84,6 +84,13 @@ export default function AdminSportsPage() {
         <span className="text-white/60 text-sm">Manage Sports</span>
       </div>
 
+      <div className="mb-6">
+        <Link href="/dashboard/admin" className="btn-back">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Back to Admin Dashboard
+        </Link>
+      </div>
+
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold mb-1 text-white">Manage Sports</h1>
         <p className="text-white/50 text-sm">Create sports, assign leadership, and configure each team.</p>
