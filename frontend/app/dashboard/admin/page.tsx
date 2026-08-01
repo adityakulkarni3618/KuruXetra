@@ -19,23 +19,19 @@ export default function AdminPage() {
     passoutYear: "",
   });
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [workoutTypes, setWorkoutTypes] = useState<any[]>([]);
-  const [newWorkoutType, setNewWorkoutType] = useState({ name: "", points: 15 });
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", body: "", sportId: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   async function load() {
-    const [p, s, w, a] = await Promise.all([
+    const [p, s, a] = await Promise.all([
       api("/api/admin/pending-users"),
       api("/api/sports"),
-      api("/api/admin-features/workout-types"),
       api("/api/admin-features/announcements"),
     ]);
     setPendingUsers(p);
     setSports(s);
-    setWorkoutTypes(w);
     setAnnouncements(a);
   }
   useEffect(() => { load(); }, []);
@@ -236,40 +232,6 @@ export default function AdminPage() {
     }
   }
 
-  async function createWorkoutType(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-    try {
-      await api("/api/admin-features/workout-types", {
-        method: "POST",
-        body: JSON.stringify({
-          name: newWorkoutType.name,
-          points: newWorkoutType.points,
-        }),
-      });
-      setNewWorkoutType({ name: "", points: 15 });
-      setMessage("Workout type added.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function toggleWorkoutType(id: string, isActive: boolean) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin-features/workout-types/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-      });
-      setMessage("Workout type updated.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
 
   async function createAnnouncement(e: React.FormEvent) {
     e.preventDefault();
@@ -568,31 +530,19 @@ export default function AdminPage() {
         ))}
       </div>
 
-      <h2 className="font-display font-semibold mb-3">Workout types</h2>
-      <form onSubmit={createWorkoutType} className="stat-card grid md:grid-cols-3 gap-4 mb-8">
-        <Input label="Type name" value={newWorkoutType.name} onChange={(v) => setNewWorkoutType((prev) => ({ ...prev, name: v }))} required />
-        <Input label="Points" type="number" value={String(newWorkoutType.points)} onChange={(v) => setNewWorkoutType((prev) => ({ ...prev, points: Number(v) }))} required />
-        <div className="md:col-span-3">
-          <button type="submit" className="btn-gold">Add workout type</button>
-        </div>
-      </form>
-      <div className="space-y-3 mb-10">
-        {workoutTypes.map((type) => (
-          <div key={type.id} className="stat-card flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium">{type.name}</p>
-              <p className="text-xs text-white/40">{type.points} points · {type.isActive ? "Active" : "Inactive"}</p>
-            </div>
-            <button
-              onClick={() => toggleWorkoutType(type.id, !type.isActive)}
-              className="btn-primary text-xs px-3 py-1.5"
-              type="button"
-            >
-              {type.isActive ? "Deactivate" : "Activate"}
-            </button>
+      <div className="stat-card mb-10 mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-display font-semibold text-white text-lg">Workout Configurations</h2>
+            <p className="text-xs text-white/50 leading-relaxed mt-1">Configure approved workout types, set individual reward point scales, or activate/deactivate logging items.</p>
           </div>
-        ))}
-        {workoutTypes.length === 0 && <p className="text-sm text-white/40">No workout types configured yet.</p>}
+          <Link
+            href="/dashboard/admin/workout-types"
+            className="btn-gold text-xs px-4 py-2 text-center whitespace-nowrap self-start sm:self-auto"
+          >
+            Manage Workout Types &rarr;
+          </Link>
+        </div>
       </div>
 
       <h2 className="font-display font-semibold mb-3">Announcements</h2>

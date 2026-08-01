@@ -75,26 +75,41 @@ export default function WorkoutsPage() {
 
       {activeSessions.length > 0 && (
         <div className="space-y-4 mb-8">
-          <h2 className="font-display font-semibold mb-3">Active Training Sessions</h2>
+          <h2 className="font-display font-semibold mb-3">Training Sessions</h2>
           {activeSessions.map((sess) => (
             <div key={sess.id} className="stat-card bg-surface/50 border border-white/5">
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
-                  <h3 className="font-display font-semibold text-gold">{sess.title}</h3>
-                  <p className="text-xs text-white/40">Sport: {sess.sport?.name} · Starts: {new Date(sess.startTime).toLocaleString()}</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-semibold text-gold">{sess.title}</h3>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                      sess.status === "ACTIVE" ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/40"
+                    }`}>
+                      {sess.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-1">Sport: {sess.sport?.name} · Starts: {new Date(sess.startTime).toLocaleString()}</p>
                 </div>
               </div>
               <div className="mt-4 space-y-3">
                 {sess.workouts.map((w: any) => {
                   const myLog = sess.athleteLogs?.find((log: any) => log.userId === me?.id && log.workoutTypeId === w.workoutTypeId);
+                  const isEnded = sess.status === "ENDED";
                   return (
                     <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-3 rounded-lg border border-white/5 text-sm">
                       <div>
                         <span className="font-medium text-white">{w.workoutType.name}</span>
                         {w.rounds && <span className="text-xs text-gold ml-2">(Rounds tracked)</span>}
                         {myLog && (
-                          <span className="text-xs text-green-400 ml-2">
-                            ✓ {myLog.value !== null && myLog.value !== undefined ? `Logged ${myLog.value} rounds` : "Completed"}
+                          <span className={`text-xs ml-2 font-medium ${
+                            myLog.status === "APPROVED" ? "text-green-400" : myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
+                          }`}>
+                            ✓ {myLog.value !== null && myLog.value !== undefined ? `Logged ${myLog.value} rounds` : "Completed"} ({myLog.status})
+                          </span>
+                        )}
+                        {isEnded && !myLog && (
+                          <span className="text-xs text-red-400/60 ml-2 font-medium">
+                            Absent (No submission)
                           </span>
                         )}
                       </div>
@@ -105,16 +120,18 @@ export default function WorkoutsPage() {
                               type="number"
                               className="input-field text-xs py-1.5 px-3 max-w-[80px]"
                               placeholder="Rounds"
+                              disabled={isEnded || myLog?.status === "APPROVED"}
                               value={roundsForm[`${sess.id}_${w.workoutTypeId}`] || (myLog?.value !== null && myLog?.value !== undefined ? String(myLog.value) : "")}
                               onChange={(e) => setRoundsForm({ ...roundsForm, [`${sess.id}_${w.workoutTypeId}`]: e.target.value })}
                             />
                             <button
                               type="button"
+                              disabled={isEnded || myLog?.status === "APPROVED"}
                               onClick={() => {
                                 const val = roundsForm[`${sess.id}_${w.workoutTypeId}`];
                                 submitSessionLog(sess.id, w.workoutTypeId, true, val ? Number(val) : undefined);
                               }}
-                              className="btn-gold text-xs px-3 py-1.5"
+                              className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               Log Rounds
                             </button>
@@ -122,8 +139,9 @@ export default function WorkoutsPage() {
                         ) : (
                           <button
                             type="button"
+                            disabled={isEnded || myLog?.status === "APPROVED"}
                             onClick={() => submitSessionLog(sess.id, w.workoutTypeId, !myLog?.completed)}
-                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                               myLog?.completed ? "bg-green-600 hover:bg-green-500 text-white" : "btn-gold"
                             }`}
                           >
