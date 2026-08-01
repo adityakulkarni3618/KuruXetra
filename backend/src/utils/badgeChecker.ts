@@ -97,14 +97,15 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
     const activityDates = new Set<string>();
     const attendanceDates = new Set<string>();
 
-    // Parse date to local YYYY-MM-DD
+    // Parse date to Asia/Kolkata YYYY-MM-DD
     const toDateStr = (date: Date) => {
-      const d = new Date(date);
-      // Format as YYYY-MM-DD in local time zone
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      return formatter.format(new Date(date));
     };
 
     attendanceList.forEach((a) => {
@@ -167,12 +168,17 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
     }
 
     // 4. Early Bird
-    // Checked in before 7:00 AM (local time hour < 7) at least 5 times
+    // Checked in before 7:00 AM IST (hour < 7) at least 5 times
     if (!existingBadgeNames.has("Early Bird")) {
       let earlyCheckins = 0;
       for (const a of attendanceList) {
-        const localHour = new Date(a.timeIn).getHours();
-        if (localHour < 7) {
+        const hourFormatter = new Intl.DateTimeFormat("en-US", {
+          timeZone: "Asia/Kolkata",
+          hour: "numeric",
+          hour12: false,
+        });
+        const istHour = parseInt(hourFormatter.format(new Date(a.timeIn)), 10);
+        if (istHour < 7) {
           earlyCheckins++;
         }
       }
