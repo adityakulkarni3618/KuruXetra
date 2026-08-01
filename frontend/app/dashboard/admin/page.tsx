@@ -219,7 +219,7 @@ export default function AdminPage() {
             className="input-field"
             value={searchParams.uniqueId}
             onChange={(e) => setSearchParams((prev) => ({ ...prev, uniqueId: e.target.value }))}
-            placeholder="KS000001"
+            placeholder="KX000001"
           />
         </label>
         <label className="block">
@@ -237,7 +237,7 @@ export default function AdminPage() {
             className="input-field"
             value={searchParams.rollNumber}
             onChange={(e) => setSearchParams((prev) => ({ ...prev, rollNumber: e.target.value }))}
-            placeholder="26CS45"
+            placeholder="26CS0001"
           />
         </label>
       </div>
@@ -305,18 +305,16 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-lg">{user.fullName}</p>
                     <span className="text-white/30 text-sm">({user.uniqueId})</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
-                      "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                    }`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                        user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                          "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      }`}>
                       {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
                     </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
-                      user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
-                      "bg-yellow-500/20 text-yellow-300"
-                    }`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
+                        user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
+                          "bg-yellow-500/20 text-yellow-300"
+                      }`}>
                       {user.status}
                     </span>
                   </div>
@@ -333,7 +331,7 @@ export default function AdminPage() {
                   </button>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs border-t border-white/5 pt-3 text-white/60">
                 <div>
                   <p className="text-white/30 font-semibold mb-0.5">Contact Details</p>
@@ -462,7 +460,7 @@ function AssignCaptainForm({ sportId, onAssign }: { sportId: string; onAssign: (
     <div className="flex gap-2">
       <input
         className="input-field text-xs"
-        placeholder="Athlete ID (e.g. KS000001)"
+        placeholder="Athlete ID (e.g. KX000001)"
         value={uniqueId}
         onChange={(e) => setUniqueId(e.target.value)}
       />
