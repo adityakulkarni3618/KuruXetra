@@ -25,10 +25,8 @@ export default function ProfilePage() {
     gender: "Male",
     dateOfBirth: "",
     bloodGroup: "",
-    emergencyContact: "",
     department: "Computer Engineering",
     academicYear: "FE",
-    division: "",
     passoutYear: "",
     fitnessGoal: "",
   });
@@ -52,10 +50,8 @@ export default function ProfilePage() {
           gender: me.gender || "Male",
           dateOfBirth: me.dateOfBirth ? me.dateOfBirth.slice(0, 10) : "",
           bloodGroup: me.bloodGroup || "",
-          emergencyContact: me.emergencyContact || "",
           department: me.department || "Computer Engineering",
           academicYear: me.academicYear || "FE",
-          division: me.division || "",
           passoutYear: me.passoutYear ? String(me.passoutYear) : "",
           fitnessGoal: me.fitnessGoal || "",
         });
@@ -125,10 +121,8 @@ export default function ProfilePage() {
         gender: form.gender,
         dateOfBirth: form.dateOfBirth || undefined,
         bloodGroup: form.bloodGroup || undefined,
-        emergencyContact: form.emergencyContact || undefined,
         department: form.department,
         academicYear: form.academicYear,
-        division: form.division || undefined,
         passoutYear: form.passoutYear ? Number(form.passoutYear) : undefined,
         fitnessGoal: form.fitnessGoal || undefined,
       };
@@ -238,10 +232,8 @@ export default function ProfilePage() {
               ))}
             </select>
           </label>
-          <Input label="Division" value={form.division} onChange={(v) => update("division", v)} />
           <Input label="Passout Year" type="number" value={form.passoutYear} onChange={(v) => update("passoutYear", v)} />
           <Input label="Blood Group" value={form.bloodGroup} onChange={(v) => update("bloodGroup", v)} />
-          <Input label="Emergency Contact" value={form.emergencyContact} onChange={(v) => update("emergencyContact", v)} />
           <label className="block md:col-span-2">
             <span className="label">Fitness Goal</span>
             <textarea

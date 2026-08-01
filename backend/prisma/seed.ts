@@ -14,7 +14,6 @@ async function main() {
       username: "ss_admin",
       passwordHash,
       fullName: "Sports Secretary",
-      collegeId: "ADMIN001",
       rollNumber: "N/A",
       department: "Sports Office",
       academicYear: "N/A",

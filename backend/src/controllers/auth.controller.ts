@@ -8,22 +8,18 @@ import { AuthedRequest } from "../middleware/auth";
 
 const registerSchema = z.object({
   fullName: z.string().min(2),
-  collegeId: z.string().min(1),
   rollNumber: z.string().min(1),
   department: z.string().min(1),
   academicYear: z.string().min(1),
-  division: z.string().optional(),
   mobileNumber: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits"),
   email: z.string().email(),
   gender: z.string().optional(),
   dateOfBirth: z.string().optional(),
   bloodGroup: z.string().optional(),
-  emergencyContact: z.string().optional(),
   passoutYear: z.preprocess((val) => {
     if (typeof val === "string") return Number(val);
     return val;
   }, z.number().int().positive().optional()),
-  username: z.string().min(3),
   password: z.string().min(6),
   confirmPassword: z.string().min(6),
   fitnessGoal: z.string().optional(),
@@ -53,17 +49,19 @@ export async function register(req: AuthedRequest, res: Response) {
   }
 
   const existing = await prisma.user.findFirst({
-    where: { OR: [{ username: data.username }, { email: data.email }] },
+    where: { email: data.email },
   });
-  if (existing) return res.status(409).json({ error: "Username or email already registered" });
+  if (existing) return res.status(409).json({ error: "Email already registered" });
 
+  const username = await generateUniqueUsername(data.email, data.rollNumber);
   const passwordHash = await bcrypt.hash(password, 10);
-  const uniqueId = await generateUniqueId();
+  const uniqueId = await generateUniqueId(data.rollNumber);
   const isFirstUser = (await prisma.user.count()) === 0;
 
   const user = await prisma.user.create({
     data: {
       ...data,
+      username,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       passwordHash,
       uniqueId,
@@ -100,6 +98,7 @@ export async function register(req: AuthedRequest, res: Response) {
       ? "Super Admin account created and active."
       : "Registered. Your account is pending Sports Secretary approval.",
     uniqueId: user.uniqueId,
+    username: user.username,
   });
 }
 
@@ -136,7 +135,21 @@ export async function login(req: AuthedRequest, res: Response) {
     },
   });
 }
+async function generateUniqueUsername(email: string, rollNumber: string) {
+  const base = (email.split("@")[0] || rollNumber)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
+  let candidate = base;
+  let suffix = 0;
+
+  while (await prisma.user.findUnique({ where: { username: candidate } })) {
+    suffix += 1;
+    candidate = `${base}${suffix}`;
+  }
+
+  return candidate;
+}
 export async function me(req: AuthedRequest, res: Response) {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },

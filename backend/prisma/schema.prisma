@@ -1,8 +1,3 @@
-// Kurukshetra Sports Management System — core schema (v1)
-// Extend this file as you add: challenges, badges, events/matches, announcements, etc.
-// The Role/Season fields are here from day 1 so future features don't need migrations
-// that break historical data.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,6 +5,214 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Season {
+  id          String         @id @default(cuid())
+  label       String         @unique
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  attendance  Attendance[]
+  memberships Membership[]   @relation("SeasonMemberships")
+  points      PointsLedger[]
+  runs        RunningLog[]
+  workouts    Workout[]
+}
+
+model User {
+  id                String          @id @default(cuid())
+  uniqueId          String          @unique
+  username          String          @unique
+  passwordHash      String
+  fullName          String
+  rollNumber        String
+  department        String
+  academicYear      String
+  mobileNumber      String
+  email             String          @unique
+  gender            String?
+  dateOfBirth       DateTime?
+  profilePhotoUrl   String?
+  bloodGroup        String?
+  studentIdCardUrl  String?
+  fitnessGoal       String?
+  role              Role            @default(STUDENT_ATHLETE)
+  status            UserStatus      @default(PENDING_APPROVAL)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  collegeIdUrl      String?
+  passoutYear       Int?
+  priorRole         Role?
+  announcements     Announcement[]
+  attendance        Attendance[]
+  meetingScores     MeetingScore[]  @relation("UserMeetingScores")
+  memberships       Membership[]
+  pointsEntries     PointsLedger[]
+  madeRoleChanges   RoleChangeLog[] @relation("UserMadeRoleChanges")
+  roleChangeLogs    RoleChangeLog[] @relation("UserRoleChanges")
+  runs              RunningLog[]
+  captainOf         Sport[]         @relation("SportCaptain")
+  scheduledMeetings TeamMeeting[]   @relation("UserScheduledMeetings")
+  workouts          Workout[]
+}
+
+model Sport {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  slug          String         @unique
+  logoUrl       String?
+  description   String?
+  ground        String?
+  practiceTime  String?
+  maxMembers    Int?
+  status        String         @default("ACTIVE")
+  captainId     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  announcements Announcement[]
+  attendance    Attendance[]
+  memberships   Membership[]
+  captain       User?          @relation("SportCaptain", fields: [captainId], references: [id])
+  meetings      TeamMeeting[]
+}
+
+model WorkoutType {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  points    Int
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  workouts  Workout[]
+}
+
+model MeetingScore {
+  id        String      @id @default(cuid())
+  meetingId String
+  userId    String
+  points    Int
+  createdAt DateTime    @default(now())
+  meeting   TeamMeeting @relation(fields: [meetingId], references: [id])
+  user      User        @relation("UserMeetingScores", fields: [userId], references: [id])
+}
+
+model TeamMeeting {
+  id          String         @id @default(cuid())
+  sportId     String
+  scheduledBy String
+  title       String
+  description String?
+  scheduledAt DateTime
+  createdAt   DateTime       @default(now())
+  scores      MeetingScore[]
+  author      User           @relation("UserScheduledMeetings", fields: [scheduledBy], references: [id])
+  sport       Sport          @relation(fields: [sportId], references: [id])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  sportId   String?
+  authorId  String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id])
+  sport     Sport?   @relation(fields: [sportId], references: [id])
+}
+
+model Membership {
+  id       String           @id @default(cuid())
+  userId   String
+  sportId  String
+  status   MembershipStatus @default(PENDING)
+  joinedAt DateTime         @default(now())
+  seasonId String?
+  season   Season?          @relation("SeasonMemberships", fields: [seasonId], references: [id])
+  sport    Sport            @relation(fields: [sportId], references: [id])
+  user     User             @relation(fields: [userId], references: [id])
+
+  @@unique([userId, sportId])
+}
+
+model Attendance {
+  id          String    @id @default(cuid())
+  userId      String
+  sportId     String?
+  seasonId    String?
+  timeIn      DateTime  @default(now())
+  timeOut     DateTime?
+  durationMin Int?
+  ground      String?
+  markedBy    String?
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  season      Season?   @relation(fields: [seasonId], references: [id])
+  sport       Sport?    @relation(fields: [sportId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model Workout {
+  id            String       @id @default(cuid())
+  userId        String
+  seasonId      String?
+  name          String
+  exercise      String?
+  sets          Int?
+  reps          Int?
+  weightKg      Float?
+  durationMin   Int?
+  calories      Int?
+  heartRate     Int?
+  notes         String?
+  photoUrl      String?
+  createdAt     DateTime     @default(now())
+  workoutTypeId String?
+  season        Season?      @relation(fields: [seasonId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  workoutType   WorkoutType? @relation(fields: [workoutTypeId], references: [id])
+}
+
+model RunningLog {
+  id             String   @id @default(cuid())
+  userId         String
+  seasonId       String?
+  distanceKm     Float
+  durationMin    Int
+  paceMinKm      Float?
+  calories       Int?
+  avgSpeed       Float?
+  maxSpeed       Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+  distanceMeters Int?
+  rounds         Float?
+  season         Season?  @relation(fields: [seasonId], references: [id])
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+model PointsLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  seasonId  String?
+  points    Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+  season    Season?  @relation(fields: [seasonId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model RoleChangeLog {
+  id          String   @id @default(cuid())
+  userId      String
+  oldRole     Role
+  newRole     Role
+  changedById String
+  changedAt   DateTime @default(now())
+  changedBy   User     @relation("UserMadeRoleChanges", fields: [changedById], references: [id])
+  user        User     @relation("UserRoleChanges", fields: [userId], references: [id])
 }
 
 enum Role {
@@ -30,225 +233,4 @@ enum UserStatus {
   PENDING_APPROVAL
   ACTIVE
   SUSPENDED
-}
-
-model Season {
-  id        String   @id @default(cuid())
-  label     String   @unique // e.g. "2026-27"
-  startsAt  DateTime
-  endsAt    DateTime
-  isActive  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  memberships Membership[]  @relation("SeasonMemberships")
-  attendance  Attendance[]
-  workouts    Workout[]
-  runs        RunningLog[]
-  points      PointsLedger[]
-}
-
-model User {
-  id              String     @id @default(cuid())
-  uniqueId        String     @unique // KS000001, KS000002 ...
-  username        String     @unique
-  passwordHash    String
-  fullName        String
-  collegeId       String
-  rollNumber      String
-  department      String
-  academicYear    String
-  division        String?
-  mobileNumber    String
-  email           String     @unique
-  gender          String?
-  dateOfBirth     DateTime?
-  profilePhotoUrl String?
-  collegeIdUrl    String?
-  bloodGroup      String?
-  emergencyContact String?
-  studentIdCardUrl String?
-  fitnessGoal     String?
-  passoutYear     Int?
-  priorRole       Role?
-
-  role            Role       @default(STUDENT_ATHLETE)
-  status          UserStatus @default(PENDING_APPROVAL)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  memberships       Membership[]
-  attendance        Attendance[]
-  workouts          Workout[]
-  runs              RunningLog[]
-  pointsEntries     PointsLedger[]
-  captainOf         Sport[]        @relation("SportCaptain")
-  roleChangeLogs    RoleChangeLog[] @relation("UserRoleChanges")
-  madeRoleChanges   RoleChangeLog[] @relation("UserMadeRoleChanges")
-  announcements     Announcement[]
-  meetingScores     MeetingScore[]  @relation("UserMeetingScores")
-  scheduledMeetings TeamMeeting[]   @relation("UserScheduledMeetings")
-}
-
-model Sport {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  slug          String   @unique
-  logoUrl       String?
-  description   String?
-  ground        String?
-  practiceTime  String?
-  maxMembers    Int?
-  status        String   @default("ACTIVE") // ACTIVE | ARCHIVED
-  captainId     String?
-  captain       User?    @relation("SportCaptain", fields: [captainId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  memberships Membership[]
-  attendance  Attendance[]
-  announcements Announcement[]
-  meetings    TeamMeeting[]
-}
-
-model WorkoutType {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  points    Int
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  workouts  Workout[]
-}
-
-model MeetingScore {
-  id        String      @id @default(cuid())
-  meetingId String
-  meeting   TeamMeeting @relation(fields: [meetingId], references: [id])
-  userId    String
-  user      User        @relation("UserMeetingScores", fields: [userId], references: [id])
-  points    Int
-  createdAt DateTime @default(now())
-}
-
-model TeamMeeting {
-  id          String         @id @default(cuid())
-  sportId     String
-  sport       Sport          @relation(fields: [sportId], references: [id])
-  scheduledBy String
-  author      User           @relation("UserScheduledMeetings", fields: [scheduledBy], references: [id])
-  title       String
-  description String?
-  scheduledAt DateTime
-  createdAt   DateTime       @default(now())
-  scores      MeetingScore[]
-}
-
-model Announcement {
-  id         String   @id @default(cuid())
-  sportId    String?  
-  sport      Sport?   @relation(fields: [sportId], references: [id])
-  authorId   String
-  author     User     @relation(fields: [authorId], references: [id])
-  title      String
-  body       String
-  createdAt  DateTime @default(now())
-}
-
-model Membership {
-  id        String            @id @default(cuid())
-  userId    String
-  user      User              @relation(fields: [userId], references: [id])
-  sportId   String
-  sport     Sport             @relation(fields: [sportId], references: [id])
-  status    MembershipStatus  @default(PENDING)
-  joinedAt  DateTime          @default(now())
-  seasonId  String?
-  season    Season?           @relation("SeasonMemberships", fields: [seasonId], references: [id])
-
-  @@unique([userId, sportId])
-}
-
-model Attendance {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id])
-  sportId    String?
-  sport      Sport?    @relation(fields: [sportId], references: [id])
-  seasonId   String?
-  season     Season?   @relation(fields: [seasonId], references: [id])
-  timeIn     DateTime  @default(now())
-  timeOut    DateTime?
-  durationMin Int?
-  ground     String?
-  markedBy   String?   // userId of captain if manually marked; null = self check-in
-  date       DateTime  @default(now())
-
-  createdAt DateTime @default(now())
-}
-
-model Workout {
-  id            String      @id @default(cuid())
-  userId        String
-  user          User        @relation(fields: [userId], references: [id])
-  seasonId      String?
-  season        Season?     @relation(fields: [seasonId], references: [id])
-  workoutTypeId String?
-  workoutType   WorkoutType? @relation(fields: [workoutTypeId], references: [id])
-  name          String
-  exercise      String?
-  sets          Int?
-  reps          Int?
-  weightKg      Float?
-  durationMin   Int?
-  calories      Int?
-  heartRate     Int?
-  notes         String?
-  photoUrl      String?
-  createdAt     DateTime @default(now())
-}
-
-model RunningLog {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  seasonId      String?
-  season        Season?  @relation(fields: [seasonId], references: [id])
-  distanceKm    Float
-  distanceMeters Int?
-  rounds        Float?
-  durationMin   Int
-  paceMinKm     Float?
-  calories      Int?
-  avgSpeed      Float?
-  maxSpeed      Float?
-  notes         String?
-  createdAt     DateTime @default(now())
-}
-
-// Simple append-only ledger; a user's total points = SUM(points) WHERE userId = x.
-// This keeps the leaderboard auditable and lets you add new point sources later
-// without ever recomputing history.
-model PointsLedger {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  seasonId  String?
-  season    Season?  @relation(fields: [seasonId], references: [id])
-  points    Int
-  reason    String   // ATTENDANCE | WORKOUT | RUNNING | MATCH_WIN | CHALLENGE | PENALTY_MISS | PENALTY_LATE
-  refId     String?  // id of the Attendance/Workout/RunningLog row that triggered this
-  createdAt DateTime @default(now())
-}
-
-model RoleChangeLog {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation("UserRoleChanges", fields: [userId], references: [id])
-  oldRole     Role
-  newRole     Role
-  changedById String
-  changedBy   User     @relation("UserMadeRoleChanges", fields: [changedById], references: [id])
-  changedAt   DateTime @default(now())
 }
