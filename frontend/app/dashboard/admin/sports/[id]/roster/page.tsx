@@ -104,32 +104,6 @@ export default function AdminSportRosterPage() {
     }
   }
 
-  async function promoteToSS(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/promote-to-ss`, { method: "POST" });
-      setMessage("Promoted to Sports Secretary.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
-
-  async function demoteSS(userId: string) {
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/users/${userId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: "STUDENT_ATHLETE" }),
-      });
-      setMessage("Sports Secretary role removed.");
-      await load();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }
 
   async function toggleStatus(userId: string, currentStatus: string) {
     setError("");
@@ -309,13 +283,6 @@ export default function AdminSportRosterPage() {
                   <p className="text-xs text-white/40 mt-1">{user.department} · Roll No: {user.rollNumber} · {user.email}</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  {user.role !== "SUPER_ADMIN" ? (
-                    <button onClick={() => promoteToSS(user.id)} className="btn-gold text-xs px-3 py-1.5">Promote to SS</button>
-                  ) : (
-                    user.uniqueId !== "KX000001" && (
-                      <button onClick={() => demoteSS(user.id)} className="btn-primary bg-yellow-600 hover:bg-yellow-500 text-xs px-3 py-1.5">Remove SS</button>
-                    )
-                  )}
                   {user.uniqueId !== "KX000001" && (
                     <>
                       <button onClick={() => toggleStatus(user.id, user.status)} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
