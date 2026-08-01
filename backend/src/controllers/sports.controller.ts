@@ -115,3 +115,69 @@ export async function sportMembers(req: AuthedRequest, res: Response) {
   });
   res.json(members);
 }
+
+export async function demoteCaptain(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // sportId
+
+  try {
+    const sport = await prisma.sport.findUnique({ where: { id } });
+    if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+    if (!sport.captainId) {
+      return res.status(400).json({ error: "Sport has no captain assigned" });
+    }
+
+    const captain = await prisma.user.findUnique({ where: { id: sport.captainId } });
+    if (!captain) {
+      // Just clear the id if the user is missing
+      await prisma.sport.update({ where: { id }, data: { captainId: null } });
+      return res.json({ message: "Captain reference cleared" });
+    }
+
+    const nextRole = captain.priorRole === "SUPER_ADMIN" ? "STUDENT_ATHLETE" : captain.priorRole || "STUDENT_ATHLETE";
+
+    await prisma.$transaction([
+      prisma.sport.update({ where: { id }, data: { captainId: null } }),
+      prisma.user.update({
+        where: { id: captain.id },
+        data: { role: nextRole, priorRole: null },
+      }),
+    ]);
+
+    return res.json({ message: "Captain demoted successfully" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to demote captain" });
+  }
+}
+
+export async function removeTeamMember(req: AuthedRequest, res: Response) {
+  const { membershipId } = req.params;
+  const actorId = req.user!.id;
+  const actorRole = req.user!.role;
+
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: { id: membershipId },
+      include: { sport: true },
+    });
+
+    if (!membership) return res.status(404).json({ error: "Membership not found" });
+
+    // Must be Admin or the captain of the sport
+    if (actorRole !== "SUPER_ADMIN" && membership.sport.captainId !== actorId) {
+      return res.status(403).json({ error: "You are not authorized to remove members from this team" });
+    }
+
+    await prisma.membership.update({
+      where: { id: membershipId },
+      data: { status: "REMOVED" },
+    });
+
+    return res.json({ message: "Member removed from team successfully" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to remove member" });
+  }
+}
+

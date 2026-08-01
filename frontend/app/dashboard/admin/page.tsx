@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AdminPage() {
+  const { user: currentUser } = useAuth();
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [sports, setSports] = useState<any[]>([]);
   const [newSport, setNewSport] = useState({ name: "", slug: "" });
@@ -111,6 +113,57 @@ export default function AdminPage() {
       await api(`/api/admin/users/${userId}/promote-to-ss`, { method: "POST" });
       setMessage("Sports Secretary promotion completed.");
       await load();
+      if (searchResults.length > 0) {
+        await searchUsers(); // Refresh search results
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function demoteSS(userId: string) {
+    if (!confirm("Are you sure you want to remove the Sports Secretary role from this user?")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${userId}/demote-from-ss`, { method: "POST" });
+      setMessage("Sports Secretary role removed successfully.");
+      await load();
+      if (searchResults.length > 0) {
+        await searchUsers(); // Refresh search results
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function removeProfile(userId: string) {
+    if (!confirm("Are you sure you want to permanently delete this athlete's profile? This will delete all their records, and they will be able to re-register/re-login from scratch.")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${userId}/remove-profile`, { method: "DELETE" });
+      setMessage("Player profile permanently removed.");
+      await load();
+      if (searchResults.length > 0) {
+        await searchUsers(); // Refresh search results
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function removeCaptain(sportId: string) {
+    if (!confirm("Are you sure you want to remove the captain of this sport?")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/sports/${sportId}/demote-captain`, { method: "POST" });
+      setMessage("Captain demoted successfully.");
+      await load();
+      if (searchResults.length > 0) {
+        await searchUsers(); // Refresh search list to update role badges
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -322,14 +375,33 @@ export default function AdminPage() {
                     {user.department} · {user.academicYear} · Roll No: {user.rollNumber} · Passout: {user.passoutYear}
                   </p>
                 </div>
-                {user.role !== "SUPER_ADMIN" && (
-                  <button
-                    onClick={() => promoteToSS(user.id)}
-                    className="btn-gold text-xs px-3 py-1.5 self-start md:self-center"
-                  >
-                    Promote to Sports Secretary
-                  </button>
-                )}
+                <div className="flex gap-2 flex-wrap self-start md:self-center">
+                  {user.role !== "SUPER_ADMIN" ? (
+                    <button
+                      onClick={() => promoteToSS(user.id)}
+                      className="btn-gold text-xs px-3 py-1.5"
+                    >
+                      Promote to Sports Secretary
+                    </button>
+                  ) : (
+                    currentUser?.id !== user.id && user.uniqueId !== "KX000001" && (
+                      <button
+                        onClick={() => demoteSS(user.id)}
+                        className="btn-primary bg-yellow-600 hover:bg-yellow-500 text-xs px-3 py-1.5"
+                      >
+                        Remove Sports Secretary Role
+                      </button>
+                    )
+                  )}
+                  {currentUser?.id !== user.id && user.uniqueId !== "KX000001" && (
+                    <button
+                      onClick={() => removeProfile(user.id)}
+                      className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
+                    >
+                      Remove Player Profile
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs border-t border-white/5 pt-3 text-white/60">
@@ -371,9 +443,18 @@ export default function AdminPage() {
           <div key={s.id} className="stat-card">
             <h3 className="font-display font-semibold">{s.name}</h3>
             <p className="text-xs text-white/40 mb-3">{s._count?.memberships ?? 0} members · {s.status}</p>
-            <p className="text-xs text-white/50 mb-2">
-              Captain: {s.captain ? s.captain.fullName : "Unassigned"}
-            </p>
+            <div className="text-xs text-white/50 mb-2 flex items-center justify-between gap-2">
+              <span>Captain: {s.captain ? s.captain.fullName : "Unassigned"}</span>
+              {s.captain && (
+                <button
+                  onClick={() => removeCaptain(s.id)}
+                  className="text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded transition-colors"
+                  type="button"
+                >
+                  Remove Captain
+                </button>
+              )}
+            </div>
             <AssignCaptainForm sportId={s.id} onAssign={assignCaptain} />
           </div>
         ))}
@@ -465,7 +546,12 @@ function AssignCaptainForm({ sportId, onAssign }: { sportId: string; onAssign: (
         onChange={(e) => setUniqueId(e.target.value)}
       />
       <button
-        onClick={() => uniqueId && onAssign(sportId, uniqueId)}
+        onClick={async () => {
+          if (uniqueId) {
+            await onAssign(sportId, uniqueId);
+            setUniqueId("");
+          }
+        }}
         className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
         type="button"
       >
