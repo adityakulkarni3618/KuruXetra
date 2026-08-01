@@ -20,8 +20,8 @@ A sports management and attendance system with training logs, leaderboards, role
   - `package.json`: Scripts for dev, build, start, lint.
 
 ## Core features
-- Registration, approval workflow, and login
-- Role-based access: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER`
+- Registration, approval workflow, and login (via Athletic ID)
+- Role-based access: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER` (supports multiple Super Admins)
 - Sport management with join requests and captain assignment
 - Attendance tracking, self-check-in/out, and captain-marked attendance
 - Workout logging and running log entries with pace/speed metrics
@@ -43,7 +43,7 @@ A sports management and attendance system with training logs, leaderboards, role
 - `/login`: Login page
 - `/register`: Registration page
 - `/dashboard`: Dashboard home
-- `/dashboard/admin`: Admin dashboard
+- `/dashboard/admin`: Admin dashboard (with full roster search & sub-admin promotion)
 - `/dashboard/attendance`: Attendance view
 - `/dashboard/captain`: Captain area
 - `/dashboard/leaderboard`: Leaderboard
@@ -56,7 +56,7 @@ A sports management and attendance system with training logs, leaderboards, role
 - `UserStatus`: `PENDING_APPROVAL`, `ACTIVE`, `SUSPENDED`
 - `MembershipStatus`: `PENDING`, `APPROVED`, `REJECTED`, `REMOVED`
 - `Season`: Used for time-bound competition periods and optional season-linked activity data
-- `User`: Stores identity, academic details, contact, role/status, and related activity
+- `User`: Stores identity (`uniqueId`), academic details, contact, role/status, and related activity
 - `Sport`: Sport metadata, captain relation, capacity, and status
 - `Membership`: Links users to sports with approval status
 - `Attendance`: Check-in/out logs, sport, season, and marked-by data
@@ -96,7 +96,7 @@ docker run --name ksms-db -e POSTGRES_USER=ksms_user -e POSTGRES_PASSWORD=ksms_p
 ```
 
 ## Seeded demo data
-- Super Admin: `ss_admin` / `Admin@123`
+- Super Admin: `KX000001` / `SSSS@123`
 - Demo sports: Kho-Kho, Kabaddi, Cricket, Football, Volleyball, Badminton, Table Tennis
 
 ## Notes
