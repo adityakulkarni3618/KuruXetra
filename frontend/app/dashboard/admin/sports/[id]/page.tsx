@@ -108,8 +108,8 @@ export default function AdminSportDashboard() {
 
       <div className="flex justify-between items-start flex-wrap gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl font-bold mb-1 text-white">{sport.name} &mdash; Administration</h1>
-          <p className="text-white/50 text-sm">Control administrative roles, rosters, check-in reports, and practice files.</p>
+          <h1 className="font-display text-3xl font-bold mb-1 text-white">{sport.teamName || sport.name}</h1>
+          <p className="text-white/50 text-sm">{sport.teamName ? `${sport.name} · ` : ""}Administration & custom configs settings.</p>
         </div>
         <span className={`text-xs uppercase font-bold px-3 py-1 rounded-full border ${sport.isActive ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-red-500/20 text-red-300 border-red-500/30"}`}>
           {sport.isActive ? "Active" : "Inactive"}

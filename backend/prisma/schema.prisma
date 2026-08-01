@@ -65,6 +65,7 @@ model Sport {
   name          String         @unique
   slug          String         @unique
   logoUrl       String?
+  teamName      String?
   description   String?
   ground        String?
   practiceTime  String?
