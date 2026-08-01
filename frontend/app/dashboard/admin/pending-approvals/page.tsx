@@ -33,7 +33,7 @@ export default function AdminPendingApprovalsPage() {
     setError("");
     setMessage("");
     try {
-      await api(`/api/admin/users/${id}/approve`, { method: "POST" });
+      await api(`/api/admin/users/${id}/approve`, { method: "PATCH" });
       setMessage("User registration approved successfully.");
       await load();
     } catch (err: any) {
@@ -49,7 +49,7 @@ export default function AdminPendingApprovalsPage() {
     setError("");
     setMessage("");
     try {
-      await api(`/api/admin/users/${id}/reject`, { method: "DELETE" });
+      await api(`/api/admin/users/${id}/reject`, { method: "PATCH" });
       setMessage("User registration rejected.");
       await load();
     } catch (err: any) {
@@ -66,7 +66,7 @@ export default function AdminPendingApprovalsPage() {
     <div>
       <div className="mb-6">
         <Link href="/dashboard/admin" className="btn-back">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Back to Admin Dashboard
         </Link>
       </div>
