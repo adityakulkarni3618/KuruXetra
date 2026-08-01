@@ -26,6 +26,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [loading, user, router]);
 
   useEffect(() => {
+    if (!loading && user && user.status === "PENDING_APPROVAL" && pathname !== "/dashboard/profile") {
+      router.push("/dashboard/profile");
+    }
+  }, [loading, user, pathname, router]);
+
+  useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
@@ -33,9 +39,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <div className="min-h-screen flex items-center justify-center text-white/40">Loading...</div>;
   }
 
-  const nav = [...baseNav];
-  if (user.role === "CAPTAIN") nav.push({ href: "/dashboard/captain", label: "My Team" });
-  if (user.role === "SUPER_ADMIN") nav.push({ href: "/dashboard/admin", label: "Admin" });
+  const nav = user.status === "PENDING_APPROVAL"
+    ? [{ href: "/dashboard/profile", label: "Profile" }]
+    : [...baseNav];
+
+  if (user.status !== "PENDING_APPROVAL") {
+    if (user.role === "CAPTAIN") nav.push({ href: "/dashboard/captain", label: "My Team" });
+    if (user.role === "SUPER_ADMIN") nav.push({ href: "/dashboard/admin", label: "Admin" });
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
