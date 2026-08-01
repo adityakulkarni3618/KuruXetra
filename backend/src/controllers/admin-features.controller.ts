@@ -254,3 +254,76 @@ export async function logSessionWorkout(req: AuthedRequest, res: Response) {
   res.json(log);
 }
 
+export async function deleteMeeting(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const meeting = await prisma.teamMeeting.findUnique({ where: { id }, include: { sport: true } });
+    if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+
+    // Auth check: Admin or captain of the sport
+    if (req.user!.role === "CAPTAIN" && meeting.sport.captainId !== req.user!.id && meeting.sport.viceCaptainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete meetings for your own sport" });
+    }
+
+    const scores = await prisma.meetingScore.findMany({ where: { meetingId: id } });
+    const scoreIds = scores.map((s) => s.id);
+
+    await prisma.$transaction([
+      prisma.pointsLedger.deleteMany({ where: { reason: "MEETING_SCORE", refId: { in: scoreIds } } }),
+      prisma.meetingScore.deleteMany({ where: { meetingId: id } }),
+      prisma.teamMeeting.delete({ where: { id } }),
+    ]);
+
+    res.json({ message: "Meeting and associated scores deleted successfully" });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete meeting" });
+  }
+}
+
+export async function deleteAnnouncement(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const announcement = await prisma.announcement.findUnique({ where: { id }, include: { sport: true } });
+    if (!announcement) return res.status(404).json({ error: "Announcement not found" });
+
+    // Auth check: Admin or author or captain of the sport
+    if (req.user!.role === "CAPTAIN" && announcement.sport && announcement.sport.captainId !== req.user!.id && announcement.sport.viceCaptainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete announcements for your own sport" });
+    }
+
+    await prisma.announcement.delete({ where: { id } });
+    res.json({ message: "Announcement deleted successfully" });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete announcement" });
+  }
+}
+
+export async function deleteSession(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const session = await prisma.session.findUnique({ where: { id }, include: { sport: true } });
+    if (!session) return res.status(404).json({ error: "Session not found" });
+
+    // Auth check: Admin or captain of the sport
+    if (req.user!.role === "CAPTAIN" && session.sport.captainId !== req.user!.id && session.sport.viceCaptainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only delete sessions for your own sport" });
+    }
+
+    await prisma.$transaction([
+      prisma.athleteSessionLog.deleteMany({ where: { sessionId: id } }),
+      prisma.sessionWorkout.deleteMany({ where: { sessionId: id } }),
+      prisma.session.delete({ where: { id } }),
+    ]);
+
+    res.json({ message: "Session and associated logs deleted successfully" });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete session" });
+  }
+}
+
