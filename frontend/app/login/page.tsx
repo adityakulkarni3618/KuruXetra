@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState("");
+  const [uniqueId, setUniqueId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(username, password);
+      await login(uniqueId, password);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -49,8 +49,8 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
-            <span className="label">Username</span>
-            <input className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <span className="label">Athletic ID</span>
+            <input className="input-field" placeholder="e.g. KX240001" value={uniqueId} onChange={(e) => setUniqueId(e.target.value)} required />
           </label>
           <label className="block">
             <span className="label">Password</span>

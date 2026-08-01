@@ -31,7 +31,6 @@ export async function searchUsers(req: AuthedRequest, res: Response) {
         id: true,
         uniqueId: true,
         fullName: true,
-        username: true,
         email: true,
         mobileNumber: true,
         gender: true,

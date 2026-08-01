@@ -9,13 +9,12 @@ interface User {
   uniqueId: string;
   fullName: string;
   role: "SUPER_ADMIN" | "CAPTAIN" | "STUDENT_ATHLETE" | "FITNESS_MEMBER";
-  username: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (uniqueId: string, password: string) => Promise<void>;
   logout: () => void;
   refresh: () => Promise<void>;
 }
@@ -43,11 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function login(username: string, password: string) {
+  async function login(uniqueId: string, password: string) {
     const data = await api("/api/auth/login", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ uniqueId, password }),
     });
     setToken(data.token);
     setUser(data.user);
