@@ -38,8 +38,9 @@ export default function AdminSportDashboard() {
     return (
       <div className="stat-card text-center py-10">
         <p className="text-red-300 font-medium mb-3">{error || "Sport details could not be found."}</p>
-        <Link href="/dashboard/admin" className="text-xs text-gold hover:underline">
-          &larr; Back to Admin Dashboard
+        <Link href="/dashboard/admin" className="btn-back mx-auto">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Back to Admin Dashboard
         </Link>
       </div>
     );
@@ -101,8 +102,9 @@ export default function AdminSportDashboard() {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/dashboard/admin" className="text-xs text-gold hover:underline">
-          &larr; Back to Admin Dashboard
+        <Link href="/dashboard/admin/sports" className="btn-back">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Back to Manage Sports
         </Link>
       </div>
 

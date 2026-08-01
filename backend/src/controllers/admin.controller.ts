@@ -4,13 +4,14 @@ import { AuthedRequest } from "../middleware/auth";
 import bcrypt from "bcryptjs";
 
 export async function searchUsers(req: AuthedRequest, res: Response) {
-  const { uniqueId, name, rollNumber, department, academicYear, passoutYear } = req.query as {
+  const { uniqueId, name, rollNumber, department, academicYear, passoutYear, role } = req.query as {
     uniqueId?: string;
     name?: string;
     rollNumber?: string;
     department?: string;
     academicYear?: string;
     passoutYear?: string;
+    role?: string;
   };
 
   try {
@@ -22,6 +23,7 @@ export async function searchUsers(req: AuthedRequest, res: Response) {
     if (department) where.AND.push({ department });
     if (academicYear) where.AND.push({ academicYear });
     if (passoutYear) where.AND.push({ passoutYear: Number(passoutYear) });
+    if (role) where.AND.push({ role });
 
     if (where.AND.length === 0) delete where.AND;
 
