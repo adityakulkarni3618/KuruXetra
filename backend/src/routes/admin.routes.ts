@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
-import { searchUsers, promoteToSportsSecretary } from "../controllers/admin.controller";
+import { searchUsers, promoteToSportsSecretary, demoteFromSportsSecretary, deleteUserPermanently } from "../controllers/admin.controller";
 import { prisma } from "../lib/prisma";
 import { Response } from "express";
 import { AuthedRequest } from "../middleware/auth";
@@ -65,5 +65,8 @@ router.patch("/users/:id/reject", async (req: AuthedRequest, res: Response) => {
 
 router.get("/users/search", searchUsers);
 router.post("/users/:id/promote-to-ss", promoteToSportsSecretary);
+router.post("/users/:id/demote-from-ss", demoteFromSportsSecretary);
+router.delete("/users/:id/remove-profile", deleteUserPermanently);
 
 export default router;
+

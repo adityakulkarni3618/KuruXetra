@@ -91,3 +91,91 @@ export async function promoteToSportsSecretary(req: AuthedRequest, res: Response
     return res.status(500).json({ error: "Failed to promote user" });
   }
 }
+
+export async function demoteFromSportsSecretary(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+  const actorId = req.user!.id;
+
+  try {
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) return res.status(404).json({ error: "Target user not found" });
+
+    if (targetUser.role !== "SUPER_ADMIN") {
+      return res.status(400).json({ error: "User is not a Sports Secretary" });
+    }
+
+    // Verify there is at least one other active SUPER_ADMIN to avoid locking out the system
+    const activeAdminCount = await prisma.user.count({
+      where: { role: "SUPER_ADMIN", status: "ACTIVE", id: { not: targetUser.id } },
+    });
+    if (activeAdminCount === 0) {
+      return res.status(400).json({ error: "Cannot demote the last remaining Sports Secretary" });
+    }
+
+    const nextRole = targetUser.priorRole || "STUDENT_ATHLETE";
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: targetUser.id },
+        data: { role: nextRole, priorRole: null },
+      }),
+      prisma.roleChangeLog.create({
+        data: {
+          userId: targetUser.id,
+          oldRole: "SUPER_ADMIN",
+          newRole: nextRole,
+          changedById: actorId,
+        },
+      }),
+    ]);
+
+    return res.json({ message: "Demoted from Sports Secretary successfully" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to demote user" });
+  }
+}
+
+export async function deleteUserPermanently(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
+
+    // Make sure they don't delete the last admin
+    if (targetUser.role === "SUPER_ADMIN") {
+      const activeAdminCount = await prisma.user.count({
+        where: { role: "SUPER_ADMIN", status: "ACTIVE", id: { not: targetUser.id } },
+      });
+      if (activeAdminCount === 0) {
+        return res.status(400).json({ error: "Cannot delete the last remaining Sports Secretary" });
+      }
+    }
+
+    await prisma.$transaction([
+      // 1. Delete relations
+      prisma.membership.deleteMany({ where: { userId: id } }),
+      prisma.attendance.deleteMany({ where: { userId: id } }),
+      prisma.workout.deleteMany({ where: { userId: id } }),
+      prisma.runningLog.deleteMany({ where: { userId: id } }),
+      prisma.pointsLedger.deleteMany({ where: { userId: id } }),
+      prisma.meetingScore.deleteMany({ where: { userId: id } }),
+
+      // 2. Dissociate captaincy, delete meetings/announcements authored
+      prisma.sport.updateMany({ where: { captainId: id }, data: { captainId: null } }),
+      prisma.teamMeeting.deleteMany({ where: { scheduledBy: id } }),
+      prisma.announcement.deleteMany({ where: { authorId: id } }),
+      prisma.roleChangeLog.deleteMany({ where: { OR: [{ userId: id }, { changedById: id }] } }),
+
+      // 3. Delete user
+      prisma.user.delete({ where: { id } }),
+    ]);
+
+    return res.json({ message: "Player profile removed permanently from system" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to permanently remove user" });
+  }
+}
+

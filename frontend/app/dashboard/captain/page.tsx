@@ -51,6 +51,21 @@ export default function CaptainPage() {
     }
   }
 
+  async function removeMember(membershipId: string) {
+    if (!confirm("Are you sure you want to remove this athlete from your team roster? Their personal profile will remain in the system.")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/sports/memberships/${membershipId}/remove-member`, {
+        method: "POST",
+      });
+      setMessage("Athlete removed from team roster.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   async function scheduleMeeting(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -150,9 +165,18 @@ export default function CaptainPage() {
       <h2 className="font-display font-semibold mb-3">Team roster ({approved.length})</h2>
       <div className="space-y-2 mb-8">
         {approved.map((m) => (
-          <div key={m.id} className="stat-card">
-            <p className="font-medium">{m.user.fullName}</p>
-            <p className="text-xs text-white/40">{m.user.uniqueId} · {m.user.department}</p>
+          <div key={m.id} className="stat-card flex justify-between items-center">
+            <div>
+              <p className="font-medium">{m.user.fullName}</p>
+              <p className="text-xs text-white/40">{m.user.uniqueId} · {m.user.department}</p>
+            </div>
+            <button
+              onClick={() => removeMember(m.id)}
+              className="btn-primary bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5"
+              type="button"
+            >
+              Remove from Team
+            </button>
           </div>
         ))}
         {approved.length === 0 && <p className="text-sm text-white/40">No approved members yet.</p>}
