@@ -173,7 +173,7 @@ export default function AdminPage() {
   }
 
   async function assignCaptain(sportId: string, uniqueId: string) {
-    // This now accepts the public athlete uniqueId (KS000001) rather than the
+    // This now accepts the public athlete uniqueId (KX000001) rather than the
     // internal database UUID. The backend resolves it to the actual user id.
     try {
       await api(`/api/sports/${sportId}/captain`, {
@@ -306,14 +306,14 @@ export default function AdminPage() {
                     <p className="font-medium text-lg">{user.fullName}</p>
                     <span className="text-white/30 text-sm">({user.uniqueId})</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                        user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
-                          "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                        "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                       }`}>
                       {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
                     </span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
-                        user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
-                          "bg-yellow-500/20 text-yellow-300"
+                      user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :
+                        "bg-yellow-500/20 text-yellow-300"
                       }`}>
                       {user.status}
                     </span>
