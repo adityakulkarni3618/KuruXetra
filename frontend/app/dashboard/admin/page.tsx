@@ -365,7 +365,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      <h2 className="font-display font-semibold mb-3">Add a sport</h2>
+      <h2 className="font-display font-semibold mb-3">Manage Sports</h2>
       <div className="grid md:grid-cols-2 gap-4 mb-10">
         {sports.map((s) => (
           <div key={s.id} className="stat-card">
