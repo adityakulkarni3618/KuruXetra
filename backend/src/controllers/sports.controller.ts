@@ -38,7 +38,7 @@ export async function updateSport(req: AuthedRequest, res: Response) {
   const { id } = req.params;
   const sport = await prisma.sport.findUnique({ where: { id } });
   if (!sport) return res.status(404).json({ error: "Sport not found" });
-  if (req.user!.role === "CAPTAIN" && sport.captainId !== req.user!.id) {
+  if (req.user!.role === "CAPTAIN" && sport.captainId !== req.user!.id && sport.viceCaptainId !== req.user!.id) {
     return res.status(403).json({ error: "You can only manage your own sport" });
   }
   const updated = await prisma.sport.update({ where: { id }, data: req.body });
