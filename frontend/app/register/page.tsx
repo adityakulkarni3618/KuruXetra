@@ -178,7 +178,7 @@ export default function RegisterPage() {
         }),
       });
 
-      setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId}. Your username is "${res.username}" — save it, you'll need it to log in. ${res.message}`);
+      setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId} — save it, you'll need it to log in. ${res.message}`);
       setTimeout(() => router.push("/login"), 3500);
     } catch (err: any) {
       setError(err.message);

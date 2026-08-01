@@ -24,7 +24,6 @@ model Season {
 model User {
   id                String          @id @default(cuid())
   uniqueId          String          @unique
-  username          String          @unique
   passwordHash      String
   fullName          String
   rollNumber        String

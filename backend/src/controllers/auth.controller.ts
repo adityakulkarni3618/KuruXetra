@@ -53,7 +53,6 @@ export async function register(req: AuthedRequest, res: Response) {
   });
   if (existing) return res.status(409).json({ error: "Email already registered" });
 
-  const username = await generateUniqueUsername(data.email, data.rollNumber);
   const passwordHash = await bcrypt.hash(password, 10);
   const uniqueId = await generateUniqueId(data.rollNumber);
   const isFirstUser = (await prisma.user.count()) === 0;
@@ -61,7 +60,6 @@ export async function register(req: AuthedRequest, res: Response) {
   const user = await prisma.user.create({
     data: {
       ...data,
-      username,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       passwordHash,
       uniqueId,
@@ -98,25 +96,24 @@ export async function register(req: AuthedRequest, res: Response) {
       ? "Super Admin account created and active."
       : "Registered. Your account is pending Sports Secretary approval.",
     uniqueId: user.uniqueId,
-    username: user.username,
   });
 }
 
 const loginSchema = z.object({
-  username: z.string(),
+  uniqueId: z.string(),
   password: z.string(),
 });
 
 export async function login(req: AuthedRequest, res: Response) {
   const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Username and password required" });
+  if (!parsed.success) return res.status(400).json({ error: "Athletic ID and password required" });
 
-  const { username, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user) return res.status(401).json({ error: "Invalid username or password" });
+  const { uniqueId, password } = parsed.data;
+  const user = await prisma.user.findUnique({ where: { uniqueId } });
+  if (!user) return res.status(401).json({ error: "Invalid Athletic ID or password" });
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: "Invalid username or password" });
+  if (!valid) return res.status(401).json({ error: "Invalid Athletic ID or password" });
 
   if (user.status === "PENDING_APPROVAL")
     return res.status(403).json({ error: "Your account is still pending approval" });
@@ -131,24 +128,8 @@ export async function login(req: AuthedRequest, res: Response) {
       uniqueId: user.uniqueId,
       fullName: user.fullName,
       role: user.role,
-      username: user.username,
     },
   });
-}
-async function generateUniqueUsername(email: string, rollNumber: string) {
-  const base = (email.split("@")[0] || rollNumber)
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
-  let candidate = base;
-  let suffix = 0;
-
-  while (await prisma.user.findUnique({ where: { username: candidate } })) {
-    suffix += 1;
-    candidate = `${base}${suffix}`;
-  }
-
-  return candidate;
 }
 export async function me(req: AuthedRequest, res: Response) {
   const user = await prisma.user.findUnique({

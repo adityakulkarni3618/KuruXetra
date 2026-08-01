@@ -7,11 +7,10 @@ async function main() {
   const passwordHash = await bcrypt.hash("Admin@123", 10);
 
   const admin = await prisma.user.upsert({
-    where: { username: "ss_admin" },
+    where: { uniqueId: "KS000001" },
     update: {},
     create: {
       uniqueId: "KS000001",
-      username: "ss_admin",
       passwordHash,
       fullName: "Sports Secretary",
       rollNumber: "N/A",
@@ -37,7 +36,7 @@ async function main() {
     });
   }
 
-  console.log("Seeded super admin:", admin.username, "/ password: Admin@123");
+  console.log("Seeded super admin:", admin.uniqueId, "/ password: Admin@123");
   console.log("Seeded sports:", sports.join(", "));
 }
 
