@@ -105,6 +105,36 @@ export default function CaptainSessionsPage() {
     }
   }
 
+  async function handleEndSession(id: string) {
+    if (!confirm("Are you sure you want to end this training session? No further athlete logging will be allowed.")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin-features/sessions/${id}/end`, { method: "POST" });
+      setMessage("Session ended successfully.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  async function handleReviewLog(sessionId: string, logId: string, status: "APPROVED" | "REJECTED") {
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin-features/sessions/${sessionId}/review-logs`, {
+        method: "POST",
+        body: JSON.stringify({
+          reviews: [{ logId, status }]
+        }),
+      });
+      setMessage(`Log updated to ${status.toLowerCase()}.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   function handleExportCSV() {
     const dataToExport = sessions.flatMap((sess) =>
       sess.athleteLogs.map((log: any) => ({
@@ -242,16 +272,34 @@ export default function CaptainSessionsPage() {
             <div key={sess.id} className="stat-card border border-white/5 hover:border-gold/20 transition-all">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-display font-semibold text-white">{sess.title}</h3>
-                  <p className="text-xs text-white/40">Scheduled for {new Date(sess.startTime).toLocaleString()}</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-semibold text-white">{sess.title}</h3>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                      sess.status === "ACTIVE" ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/40"
+                    }`}>
+                      {sess.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-0.5">Scheduled for {new Date(sess.startTime).toLocaleString()}</p>
                 </div>
-                <button
-                  onClick={() => handleDeleteSession(sess.id)}
-                  className="text-xs text-red-400 hover:text-red-300"
-                  type="button"
-                >
-                  Delete
-                </button>
+                <div className="flex gap-3">
+                  {sess.status === "ACTIVE" && (
+                    <button
+                      onClick={() => handleEndSession(sess.id)}
+                      className="text-xs text-gold border border-gold/20 bg-gold/10 px-2 py-0.5 rounded hover:bg-gold/20 transition-all font-medium"
+                      type="button"
+                    >
+                      End Session
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteSession(sess.id)}
+                    className="text-xs text-red-400 hover:text-red-300"
+                    type="button"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
               
               <div className="mt-4 border-t border-white/5 pt-3">
@@ -268,13 +316,40 @@ export default function CaptainSessionsPage() {
               {sess.athleteLogs?.length > 0 && (
                 <div className="mt-4 border-t border-white/5 pt-3">
                   <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Athlete Submissions</p>
-                  <div className="space-y-1.5 text-xs text-white/70">
+                  <div className="space-y-2 text-xs text-white/70">
                     {sess.athleteLogs.map((log: any) => (
-                      <div key={log.id} className="flex justify-between border-b border-white/5 py-1">
-                        <span>{log.user.fullName} ({log.workoutType.name})</span>
-                        <span className="text-gold">
-                          {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
-                        </span>
+                      <div key={log.id} className="flex items-center justify-between border-b border-white/5 py-1.5 flex-wrap gap-2">
+                        <div>
+                          <span className="font-medium text-white">{log.user.fullName}</span>
+                          <span className="text-white/40 ml-1">({log.workoutType.name})</span>
+                          <span className="text-gold ml-2">
+                            {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {log.status === "PENDING" ? (
+                            <>
+                              <button
+                                onClick={() => handleReviewLog(sess.id, log.id, "APPROVED")}
+                                className="text-[10px] bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded font-medium hover:bg-green-500/30 transition-all"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleReviewLog(sess.id, log.id, "REJECTED")}
+                                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-medium hover:bg-red-500/30 transition-all"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            <span className={`text-[10px] uppercase font-bold tracking-wider ${
+                              log.status === "APPROVED" ? "text-green-400" : "text-red-400"
+                            }`}>
+                              {log.status}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
