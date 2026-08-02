@@ -120,9 +120,11 @@ export default function ProfilePage() {
         body: JSON.stringify(form),
       });
       setMessage("Profile details updated successfully.");
+      setTimeout(() => setMessage(""), 5000);
       refresh();
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -140,8 +142,10 @@ export default function ProfilePage() {
       });
       setIsPublic(privacyPendingVal);
       setMessage(`Account privacy successfully set to ${privacyPendingVal ? "Public" : "Private"}.`);
+      setTimeout(() => setMessage(""), 5000);
     } catch (err: any) {
       setError(err.message || "Failed to save privacy settings");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setShowPrivacyConfirm(false);
       setPrivacyPendingVal(null);
@@ -164,11 +168,13 @@ export default function ProfilePage() {
         body: JSON.stringify({ mediaUrl: finalUrl || undefined, caption: statusCaption || undefined }),
       });
       setMessage("Status story uploaded successfully! It will disappear in 24 hours.");
+      setTimeout(() => setMessage(""), 5000);
       setStatusMedia("");
       setStatusCaption("");
       setStatusFile(null);
     } catch (err: any) {
       setError(err.message || "Status upload failed.");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setPostingStatus(false);
     }
@@ -190,9 +196,11 @@ export default function ProfilePage() {
       setProfilePhotoUrl(url);
       setProfilePreview(url);
       setMessage("Profile photo updated successfully.");
+      setTimeout(() => setMessage(""), 5000);
       refresh();
     } catch (err: any) {
       setError(err.message || "Photo upload failed");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -213,9 +221,11 @@ export default function ProfilePage() {
       setCollegeIdUrl(url);
       setIdPreview(url);
       setMessage("College ID document updated successfully.");
+      setTimeout(() => setMessage(""), 5000);
       refresh();
     } catch (err: any) {
       setError(err.message || "College ID upload failed");
+      setTimeout(() => setError(""), 5000);
     } finally {
       setLoading(false);
     }
