@@ -20,6 +20,9 @@ export async function getUserProfile(req: AuthedRequest, res: Response) {
           where: { status: "APPROVED" },
           include: { sport: true },
         },
+        badges: {
+          include: { badge: true }
+        }
       },
     });
 

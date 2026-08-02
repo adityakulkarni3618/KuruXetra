@@ -208,7 +208,7 @@ export default function SportsPage() {
               {otherSports.map((s) => {
                 const joined = myMembershipIds.has(s.id);
                 return (
-                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 cursor-pointer flex flex-col justify-between" onClick={() => openExploreDetail(s)}>
+                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start">
                         <div>
@@ -219,11 +219,17 @@ export default function SportsPage() {
                       </div>
                       {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
                     </div>
-                    <div>
+                    <div className="flex gap-2 mt-4 flex-wrap">
                       <button
-                        onClick={(e) => { e.stopPropagation(); join(s.id); }}
+                        onClick={() => openExploreDetail(s)}
+                        className="btn-gold text-xs px-3 py-1.5 flex-1 justify-center"
+                      >
+                        Explore Sport
+                      </button>
+                      <button
+                        onClick={() => join(s.id)}
                         disabled={joined}
-                        className="btn-primary text-xs mt-4 disabled:opacity-40 w-full md:w-auto"
+                        className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40 flex-1 justify-center"
                       >
                         {joined ? "Join Requested" : "Request to join"}
                       </button>
@@ -310,6 +316,25 @@ export default function SportsPage() {
                   return null;
                 })}
                 {buildFeed(exploreDetail).length === 0 && <p className="text-sm text-white/30 italic">No public logs available.</p>}
+              </div>
+
+              {/* Explore Details & Announcements Sidebar */}
+              <div className="space-y-4">
+                <div className="stat-card border border-gold/15 bg-gold/5">
+                  <h3 className="font-display font-semibold text-white text-sm mb-2">About {exploreSport.teamName || exploreSport.name}</h3>
+                  <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap">
+                    {exploreSport.customAbout || "No custom info provided by captain yet."}
+                  </p>
+                </div>
+
+                {exploreSport.customNotice && (
+                  <div className="stat-card border border-blue/15 bg-blue/5">
+                    <h3 className="font-display font-semibold text-white text-sm mb-1">📢 Important Notice</h3>
+                    <p className="text-xs text-white/80 leading-relaxed font-semibold">
+                      {exploreSport.customNotice}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

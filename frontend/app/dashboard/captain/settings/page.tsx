@@ -11,6 +11,8 @@ export default function CaptainSettingsPage() {
     ground: "",
     practiceTime: "",
     description: "",
+    customAbout: "",
+    customNotice: "",
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -29,6 +31,8 @@ export default function CaptainSettingsPage() {
           ground: sport.ground || "",
           practiceTime: sport.practiceTime || "",
           description: sport.description || "",
+          customAbout: sport.customAbout || "",
+          customNotice: sport.customNotice || "",
         });
       }
     } catch (err: any) {
@@ -115,6 +119,24 @@ export default function CaptainSettingsPage() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Provide information about training, trials, and team rules..."
+            />
+          </label>
+          <label className="block">
+            <span className="label">Explore Details - Custom About (What others see on clicking Explore)</span>
+            <textarea
+              className="input-field min-h-[100px]"
+              value={form.customAbout}
+              onChange={(e) => setForm({ ...form, customAbout: e.target.value })}
+              placeholder="Explain team culture, recruitment info, achievements for non-members..."
+            />
+          </label>
+          <label className="block">
+            <span className="label">Explore Details - Notice Message</span>
+            <input
+              className="input-field"
+              value={form.customNotice}
+              onChange={(e) => setForm({ ...form, customNotice: e.target.value })}
+              placeholder="e.g. Tryouts starting next week! Attend at ground."
             />
           </label>
           <button type="submit" className="btn-gold w-full mt-4">Save Profile Settings</button>

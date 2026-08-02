@@ -81,6 +81,8 @@ model Sport {
   isActive      Boolean        @default(true)
   captainId     String?
   viceCaptainId String?
+  customAbout   String?
+  customNotice  String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   announcements Announcement[]
