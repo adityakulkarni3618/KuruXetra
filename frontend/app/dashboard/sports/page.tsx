@@ -281,41 +281,21 @@ export default function SportsPage() {
               {/* Chronological Feed Column */}
               <div className="md:col-span-2 space-y-4">
                 <h2 className="font-display font-semibold text-lg text-white mb-2 font-medium">Team Activity Preview</h2>
-                {buildFeed(exploreDetail).map((item, idx) => {
-                  if (item.type === "announcement") {
-                    return (
-                      <div key={idx} className="stat-card border border-blue/10 opacity-75">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue/20 text-blue-300">📢 Announcement</span>
-                        </div>
-                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
-                        <p className="text-xs text-white/50 mt-2 whitespace-pre-wrap">{item.data.body}</p>
+                {buildFeed(exploreDetail).filter(item => item.type === "announcement").map((item, idx) => {
+                  return (
+                    <div key={idx} className="stat-card border border-blue/10 opacity-75">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue/20 text-blue-300">📢 Announcement</span>
+                        <span className="text-xs text-white/30">{item.date.toLocaleDateString()}</span>
                       </div>
-                    );
-                  }
-                  if (item.type === "meeting") {
-                    return (
-                      <div key={idx} className="stat-card border border-purple-500/10 opacity-75">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">🗓 Meeting</span>
-                        </div>
-                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
-                      </div>
-                    );
-                  }
-                  if (item.type === "session") {
-                    return (
-                      <div key={idx} className="stat-card border border-green-500/10 opacity-75">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-300">⚡ Practice Session</span>
-                        </div>
-                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
-                      </div>
-                    );
-                  }
-                  return null;
+                      <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
+                      <p className="text-xs text-white/50 mt-2 whitespace-pre-wrap">{item.data.body}</p>
+                    </div>
+                  );
                 })}
-                {buildFeed(exploreDetail).length === 0 && <p className="text-sm text-white/30 italic">No public logs available.</p>}
+                {buildFeed(exploreDetail).filter(item => item.type === "announcement").length === 0 && (
+                  <p className="text-sm text-white/30 italic">No public announcements available.</p>
+                )}
               </div>
 
               {/* Explore Details & Announcements Sidebar */}
