@@ -89,14 +89,117 @@ export default function OverviewPage() {
       .catch(() => {});
   }, []);
 
+  // Active countdown for upcoming session or meeting
+  const [countdownText, setCountdownText] = useState("");
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const upcoming = feedItems
+        .filter((item) => item.type === "session" || item.type === "meeting")
+        .map((item) => ({ title: item.data.title, date: item.date.getTime() }))
+        .filter((item) => item.date > now)
+        .sort((a, b) => a.date - b.date)[0];
+
+      if (upcoming) {
+        const diff = upcoming.date - now;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diff % (1000 * 60)) / 1000);
+        setCountdownText(`⏳ "${upcoming.title}" starts in ${hours}h ${mins}m ${secs}s`);
+      } else {
+        setCountdownText("");
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [feedItems]);
+
+  // Request notifications helper for Sports Secretaries
+  const [notifGranted, setNotifGranted] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotifGranted(Notification.permission === "granted");
+      
+      // Auto-trigger push alert simulation if SS user and pending approvals exist
+      if (user?.role === "SUPER_ADMIN") {
+        api("/api/admin/pending-users").then((pending) => {
+          if (pending && pending.length > 0 && Notification.permission === "granted") {
+            new Notification("Pending Registrations", {
+              body: `There are ${pending.length} athlete profiles waiting for activation.`,
+              icon: "/favicon.ico"
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [user]);
+
+  async function requestNotifPermission() {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setNotifGranted(permission === "granted");
+    }
+  }
+
   const myRank = leaderboard.find((r) => r.id === user?.id);
   const totalDistance = runs.reduce((sum, r) => sum + (r.distanceKm || 0), 0);
   const openCheckIn = attendance.find((a) => !a.timeOut);
 
+  // Latest announcements for the top News Banner
+  const latestAnnouncements = feedItems.filter((item) => item.type === "announcement").slice(0, 3);
+
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold mb-1">Welcome back, {user?.fullName?.split(" ")[0]}</h1>
-      <p className="text-white/50 text-sm mb-8">Here's where you stand today.</p>
+      <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold mb-1">Welcome back, {user?.fullName?.split(" ")[0]}</h1>
+          <p className="text-white/50 text-sm">Here's where you stand today.</p>
+        </div>
+
+        {/* SS push alert request indicator */}
+        {user?.role === "SUPER_ADMIN" && !notifGranted && (
+          <button
+            onClick={requestNotifPermission}
+            className="text-[10px] bg-gold/15 text-gold border border-gold/30 hover:bg-gold/25 px-2.5 py-1.5 rounded-lg font-bold"
+          >
+            🔔 Enable Registration Push Alerts
+          </button>
+        )}
+      </div>
+
+      {/* Countdown Alert Panel */}
+      {countdownText && (
+        <div className="bg-gold/10 border border-gold/35 rounded-xl p-3.5 mb-6 text-xs text-gold flex items-center justify-between animate-pulse">
+          <span className="font-bold tracking-wide">{countdownText}</span>
+          <span className="text-[9px] uppercase font-bold bg-gold/20 px-2 py-0.5 rounded">Upcoming</span>
+        </div>
+      )}
+
+      {/* Top News & Announcements Row */}
+      {latestAnnouncements.length > 0 && (
+        <div className="stat-card mb-6 border border-blue-500/20 bg-blue-500/[0.01]">
+          <h2 className="font-display font-semibold text-white text-xs uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            📢 Latest Announcements & News
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {latestAnnouncements.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => setSelectedItem(item)}
+                className="bg-surface/65 border border-white/5 hover:border-gold/35 p-3 rounded-lg cursor-pointer transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="text-xs font-semibold text-white truncate mb-1">{item.data.title}</h3>
+                  <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed">{item.data.body}</p>
+                </div>
+                <span className="text-[9px] text-gold font-medium mt-2 block">Read details &rarr;</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* ── Statuses / Stories Bar (WhatsApp style) ── */}
       <div className="stat-card mb-8">

@@ -179,6 +179,23 @@ export default function RegisterPage() {
       });
 
       setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId} — save it, you'll need it to log in. ${res.message}`);
+      
+      // Hidden trigger for password manager to capture Athletic ID and password
+      if (typeof document !== "undefined") {
+        const pmForm = document.createElement("form");
+        pmForm.setAttribute("style", "display:none;");
+        pmForm.innerHTML = `
+          <input type="text" name="username" value="${res.uniqueId}" autocomplete="username" />
+          <input type="password" name="password" value="${form.password}" autocomplete="current-password" />
+        `;
+        document.body.appendChild(pmForm);
+        // Simulate minor user interaction or form action for trigger
+        setTimeout(() => {
+          try { pmForm.submit(); } catch {}
+          document.body.removeChild(pmForm);
+        }, 100);
+      }
+
       setTimeout(() => router.push(`/login?registeredId=${res.uniqueId}`), 3500);
     } catch (err: any) {
       setError(err.message);
@@ -235,6 +252,7 @@ export default function RegisterPage() {
 
           <form onSubmit={step === 3 ? handleSubmit : (e) => e.preventDefault()} className="space-y-6">
             {/* STEP 1: PERSONAL INFO */}
+
             {step === 1 && (
               <div className="space-y-4">
                 <h3 className="font-display font-semibold text-base text-gold border-b border-border pb-2 mb-4">

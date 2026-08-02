@@ -27,14 +27,34 @@ export default function WorkoutsPage() {
   const [sessionCheckInStates, setSessionCheckInStates] = useState<Record<string, { checkInTime: string; loading: boolean }>>({});
 
   async function load() {
-    const [w, m, s] = await Promise.all([
+    const [w, m, s, att] = await Promise.all([
       api("/api/workouts/me"),
       api("/api/auth/me"),
       api("/api/admin-features/sessions"),
+      api("/api/attendance/me"),
     ]);
     setWorkouts(w);
     setMe(m);
     setSessions(s);
+
+    // Auto-populate check in state from attendance logs matching the sports
+    const checkedInMap: Record<string, { checkInTime: string; loading: boolean }> = {};
+    if (att && s) {
+      s.forEach((sess: any) => {
+        // Find attendance entry for this sport on the same day as the session
+        const sessDate = new Date(sess.startTime).toDateString();
+        const matchingAtt = att.find((a: any) => {
+          return a.sportId === sess.sportId && new Date(a.timeIn).toDateString() === sessDate;
+        });
+        if (matchingAtt) {
+          checkedInMap[sess.id] = {
+            checkInTime: new Date(matchingAtt.timeIn).toLocaleTimeString(),
+            loading: false
+          };
+        }
+      });
+    }
+    setSessionCheckInStates(checkedInMap);
   }
   useEffect(() => { load(); }, []);
 
@@ -248,8 +268,16 @@ export default function WorkoutsPage() {
                         <button
                           type="button"
                           disabled={checkInState.loading}
-                          onClick={() => handleSessionCheckIn(sess.id, sess.sportId)}
-                          className="text-xs text-gold border border-gold/25 bg-gold/5 px-2.5 py-1 rounded hover:bg-gold/15 transition-all font-semibold"
+                          onClick={() => {
+                            const startTime = new Date(sess.startTime).getTime();
+                            const now = Date.now();
+                            if (now < startTime) {
+                              alert(`You can only check in after the session starts at ${new Date(sess.startTime).toLocaleTimeString()}`);
+                              return;
+                            }
+                            handleSessionCheckIn(sess.id, sess.sportId);
+                          }}
+                          className="text-xs text-gold border border-gold/25 bg-gold/5 px-2.5 py-1 rounded hover:bg-gold/15 transition-all font-semibold disabled:opacity-55"
                         >
                           {checkInState.loading ? "Checking in..." : "Check In for Session"}
                         </button>
