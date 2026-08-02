@@ -90,17 +90,20 @@ export default function ProfilePage() {
   async function uploadToCloudinary(file: File): Promise<string> {
     const cloudName = "rw3wmwga";
     const uploadPreset = "ksms_uploads";
+    
+    // Determine whether to upload as image or video
+    const resourceType = file.type.startsWith("video/") ? "video" : "image";
 
     const data = new FormData();
     data.append("file", file);
     data.append("upload_preset", uploadPreset);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
       method: "POST",
       body: data,
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || "Image upload failed");
+      throw new Error(errData.error?.message || "File upload failed");
     }
     const json = await res.json();
     return json.secure_url;
