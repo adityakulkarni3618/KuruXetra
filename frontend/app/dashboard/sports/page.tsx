@@ -155,7 +155,7 @@ export default function SportsPage() {
 
   return (
     <div>
-      {!selectedSport ? (
+      {!selectedSport && !exploreSport ? (
         // ── Sports List Main Layout ──────────────────────────────────────────
         <>
           <h1 className="font-display text-2xl font-bold mb-1">Sports & Teams</h1>
