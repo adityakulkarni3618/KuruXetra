@@ -45,6 +45,7 @@ export default function ProfilePage() {
   // Create Post States inside Profile page
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
+  const [postFile, setPostFile] = useState<File | null>(null);
   const [postIsGlobal, setPostIsGlobal] = useState(true);
   const [postTargetSportId, setPostTargetSportId] = useState("");
   const [postingPost, setPostingPost] = useState(false);
@@ -224,11 +225,15 @@ export default function ProfilePage() {
     setError("");
     setMessage("");
     try {
+      let finalUrl = newPostImage;
+      if (postFile) {
+        finalUrl = await uploadToCloudinary(postFile);
+      }
       await api("/api/social/posts", {
         method: "POST",
         body: JSON.stringify({
           content: newPostContent,
-          imageUrl: newPostImage || undefined,
+          imageUrl: finalUrl || undefined,
           isGlobal: postIsGlobal,
           targetSportId: postIsGlobal ? undefined : (postTargetSportId || undefined),
         }),
@@ -237,6 +242,7 @@ export default function ProfilePage() {
       setTimeout(() => setMessage(""), 5000);
       setNewPostContent("");
       setNewPostImage("");
+      setPostFile(null);
     } catch (err: any) {
       setError(err.message || "Failed to publish post.");
       setTimeout(() => setError(""), 5000);
@@ -453,10 +459,21 @@ export default function ProfilePage() {
           <div className="flex gap-2 items-center flex-wrap">
             <input
               className="input-field text-xs flex-1 min-w-[200px]"
-              placeholder="Image URL (optional)"
+              placeholder="Or enter Image URL (optional)"
               value={newPostImage}
               onChange={(e) => setNewPostImage(e.target.value)}
             />
+
+            {/* Direct File Attachment button */}
+            <label className="btn-primary text-xs cursor-pointer py-1.5 px-3 bg-white/10 hover:bg-white/15 rounded shrink-0">
+              {postFile ? "✓ File Attached" : "Attach Photo/Video"}
+              <input 
+                type="file" 
+                accept="image/*,video/*" 
+                className="hidden" 
+                onChange={(e) => setPostFile(e.target.files?.[0] || null)} 
+              />
+            </label>
 
             {/* Global Checkbox Toggle */}
             <label className="flex items-center gap-1.5 text-xs text-white/70 select-none cursor-pointer">
