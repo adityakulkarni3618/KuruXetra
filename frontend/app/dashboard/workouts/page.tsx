@@ -1,60 +1,85 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
-const empty = { workoutTypeId: "", exercise: "", sets: "", reps: "", weightKg: "", durationMin: "", calories: "", notes: "" };
+const emptyForm = {
+  workoutName: "",
+  exercise: "",
+  sets: "",
+  reps: "",
+  weightKg: "",
+  durationMin: "",
+  calories: "",
+  notes: "",
+};
 
 export default function WorkoutsPage() {
+  const router = useRouter();
   const [workouts, setWorkouts] = useState<any[]>([]);
-  const [types, setTypes] = useState<any[]>([]);
   const [me, setMe] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [roundsForm, setRoundsForm] = useState<Record<string, string>>({});
-  const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
+  const [sessionError, setSessionError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
   async function load() {
-    const [w, t, m, s] = await Promise.all([
+    const [w, m, s] = await Promise.all([
       api("/api/workouts/me"),
-      api("/api/admin-features/workout-types"),
       api("/api/auth/me"),
       api("/api/admin-features/sessions"),
     ]);
     setWorkouts(w);
-    setTypes(t.filter((type: any) => type.isActive));
     setMe(m);
     setSessions(s);
   }
   useEffect(() => { load(); }, []);
 
-  async function submitSessionLog(sessionId: string, workoutTypeId: string, completed: boolean, value?: number) {
-    setError("");
+  // ── Log a session exercise ──────────────────────────────────────────────
+  async function submitSessionLog(
+    sessionId: string,
+    sessionWorkoutId: string,
+    exerciseName: string,
+    rounds: boolean,
+    value?: number
+  ) {
+    setSessionError("");
     try {
       await api(`/api/admin-features/sessions/${sessionId}/logs`, {
         method: "POST",
-        body: JSON.stringify({ workoutTypeId, completed, value }),
+        body: JSON.stringify({
+          sessionWorkoutId,
+          completed: true,
+          value: rounds ? value : undefined,
+        }),
       });
       await load();
     } catch (err: any) {
-      setError(err.message);
+      setSessionError(err.message);
     }
   }
 
-  const selectedType = types.find((type) => type.id === form.workoutTypeId);
-
+  // ── Log a personal workout (free text) ─────────────────────────────────
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const payload: any = { workoutTypeId: form.workoutTypeId, exercise: form.exercise || undefined, notes: form.notes || undefined };
+      const payload: any = {
+        name: form.workoutName.trim(),
+        exercise: form.exercise || undefined,
+        notes: form.notes || undefined,
+      };
       for (const k of ["sets", "reps", "weightKg", "durationMin", "calories"] as const) {
         if (form[k]) payload[k] = Number(form[k]);
       }
       await api("/api/workouts", { method: "POST", body: JSON.stringify(payload) });
-      setForm(empty);
+      setForm(emptyForm);
+      setShowLogForm(false);
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -64,164 +89,279 @@ export default function WorkoutsPage() {
   }
 
   const mySportIds = new Set((me?.memberships || []).filter((ms: any) => ms.status === "APPROVED").map((ms: any) => ms.sportId));
-  const activeSessions = sessions.filter((sess) => mySportIds.has(sess.sportId));
+  const activeSessions = sessions.filter((sess) => mySportIds.has(sess.sportId) && sess.status === "ACTIVE");
+  const endedSessions = sessions.filter((sess) => mySportIds.has(sess.sportId) && sess.status === "ENDED");
 
+  // ── Detail Page: Log Workout ────────────────────────────────────────────
+  if (showLogForm) {
+    return (
+      <div>
+        <div className="mb-6">
+          <button onClick={() => { setShowLogForm(false); setForm(emptyForm); setError(""); }} className="btn-back">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Workouts
+          </button>
+        </div>
+
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-bold text-white">Log Personal Workout</h1>
+          <p className="text-white/50 text-sm mt-1">Record your own workout — sets, reps, duration, and notes.</p>
+        </div>
+
+        {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
+
+        <form onSubmit={submit} className="stat-card max-w-2xl space-y-4">
+          <label className="block">
+            <span className="label">Workout / Exercise Name <span className="text-red-400">*</span></span>
+            <input
+              className="input-field"
+              placeholder="e.g. Morning Gym, Sprints, Strength Training"
+              value={form.workoutName}
+              onChange={(e) => setForm({ ...form, workoutName: e.target.value })}
+              required
+              autoFocus
+            />
+          </label>
+
+          <label className="block">
+            <span className="label">Exercise Details</span>
+            <input
+              className="input-field"
+              placeholder="e.g. Bench Press, Squats, Cardio"
+              value={form.exercise}
+              onChange={(e) => setForm({ ...form, exercise: e.target.value })}
+            />
+          </label>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <label className="block">
+              <span className="label">Sets</span>
+              <input className="input-field" type="number" min="1" placeholder="0" value={form.sets} onChange={(e) => setForm({ ...form, sets: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Reps</span>
+              <input className="input-field" type="number" min="1" placeholder="0" value={form.reps} onChange={(e) => setForm({ ...form, reps: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Weight (kg)</span>
+              <input className="input-field" type="number" min="0" step="0.5" placeholder="0" value={form.weightKg} onChange={(e) => setForm({ ...form, weightKg: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Duration (min)</span>
+              <input className="input-field" type="number" min="1" placeholder="0" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Calories</span>
+              <input className="input-field" type="number" min="0" placeholder="0" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="label">Notes</span>
+            <textarea
+              className="input-field resize-none"
+              rows={3}
+              placeholder="Any notes about this workout..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+          </label>
+
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={loading} className="btn-gold flex-1">
+              {loading ? "Saving..." : "Save Workout"}
+            </button>
+            <button type="button" onClick={() => { setShowLogForm(false); setForm(emptyForm); }} className="btn-back flex-1 justify-center">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ── Main Workouts List Page ─────────────────────────────────────────────
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold mb-1">Workouts</h1>
-      <p className="text-white/50 text-sm mb-8">Log a workout from the approved workout type list.</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Workouts</h1>
+          <p className="text-white/50 text-sm mt-1">Log training sessions and track your personal workouts.</p>
+        </div>
+        <button onClick={() => setShowLogForm(true)} className="btn-gold flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Log Workout
+        </button>
+      </div>
 
-      {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
+      {sessionError && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{sessionError}</div>}
 
+      {/* ── Active Team Sessions ── */}
       {activeSessions.length > 0 && (
-        <div className="space-y-4 mb-8">
-          <h2 className="font-display font-semibold mb-3">Training Sessions</h2>
-          {activeSessions.map((sess) => (
-            <div key={sess.id} className="stat-card bg-surface/50 border border-white/5">
-              <div className="flex justify-between items-start flex-wrap gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display font-semibold text-gold">{sess.title}</h3>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                      sess.status === "ACTIVE" ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/40"
-                    }`}>
-                      {sess.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/40 mt-1">Sport: {sess.sport?.name} · Starts: {new Date(sess.startTime).toLocaleString()}</p>
+        <div className="mb-8">
+          <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            Active Training Sessions
+          </h2>
+          <div className="space-y-4">
+            {activeSessions.map((sess) => (
+              <div key={sess.id} className="stat-card border border-green-500/20 hover:border-green-500/30 transition-all">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <h3 className="font-display font-semibold text-white">{sess.title}</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-green-500/20 text-green-300">ACTIVE</span>
+                  <span className="text-xs text-white/40 ml-auto">{sess.sport?.name} · {new Date(sess.startTime).toLocaleString()}</span>
+                </div>
+                <div className="space-y-2">
+                  {sess.workouts.map((w: any) => {
+                    const exName = w.customName || w.workoutType?.name || "Exercise";
+                    const key = `${sess.id}_${w.id}`;
+                    const myLog = sess.athleteLogs?.find(
+                      (log: any) => log.userId === me?.id &&
+                      (log.customExerciseName === exName || log.workoutTypeId === w.workoutTypeId)
+                    );
+                    const isLogged = !!myLog;
+
+                    return (
+                      <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface p-3 rounded-lg border border-white/5 text-sm">
+                        <div>
+                          <span className="font-medium text-white">{exName}</span>
+                          {w.rounds && <span className="text-xs text-gold ml-2">(Rounds tracked)</span>}
+                          {isLogged && (
+                            <span className={`text-xs ml-2 font-medium ${
+                              myLog.status === "APPROVED" ? "text-green-400" :
+                              myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
+                            }`}>
+                              ✓ {myLog.value ? `${myLog.value} rounds` : "Completed"} ({myLog.status})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isLogged ? (
+                            <>
+                              {w.rounds && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  placeholder="Rounds"
+                                  className="input-field text-xs py-1.5 px-3 max-w-[80px]"
+                                  value={roundsForm[key] || ""}
+                                  onChange={(e) => setRoundsForm({ ...roundsForm, [key]: e.target.value })}
+                                />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => submitSessionLog(
+                                  sess.id, w.id, exName, w.rounds,
+                                  roundsForm[key] ? Number(roundsForm[key]) : undefined
+                                )}
+                                className="btn-gold text-xs px-3 py-1.5"
+                              >
+                                {w.rounds ? "Log Rounds" : "Mark Done ✓"}
+                              </button>
+                            </>
+                          ) : (
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                              myLog.status === "APPROVED" ? "bg-green-500/20 text-green-300" :
+                              myLog.status === "REJECTED" ? "bg-red-500/20 text-red-300" :
+                              "bg-yellow-500/20 text-yellow-300"
+                            }`}>
+                              {myLog.status === "APPROVED" ? "✓ Approved" :
+                               myLog.status === "REJECTED" ? "✗ Rejected" : "⏳ Pending"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {sess.workouts.length === 0 && <p className="text-xs text-white/30">No exercises added yet.</p>}
                 </div>
               </div>
-              <div className="mt-4 space-y-3">
-                {sess.workouts.map((w: any) => {
-                  const myLog = sess.athleteLogs?.find((log: any) => log.userId === me?.id && log.workoutTypeId === w.workoutTypeId);
-                  const isEnded = sess.status === "ENDED";
-                  return (
-                    <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-3 rounded-lg border border-white/5 text-sm">
-                      <div>
-                        <span className="font-medium text-white">{w.workoutType.name}</span>
-                        {w.rounds && <span className="text-xs text-gold ml-2">(Rounds tracked)</span>}
-                        {myLog && (
-                          <span className={`text-xs ml-2 font-medium ${
-                            myLog.status === "APPROVED" ? "text-green-400" : myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
-                          }`}>
-                            ✓ {myLog.value !== null && myLog.value !== undefined ? `Logged ${myLog.value} rounds` : "Completed"} ({myLog.status})
-                          </span>
-                        )}
-                        {isEnded && !myLog && (
-                          <span className="text-xs text-red-400/60 ml-2 font-medium">
-                            Absent (No submission)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {w.rounds ? (
-                          <>
-                            <input
-                              type="number"
-                              className="input-field text-xs py-1.5 px-3 max-w-[80px]"
-                              placeholder="Rounds"
-                              disabled={isEnded || myLog?.status === "APPROVED"}
-                              value={roundsForm[`${sess.id}_${w.workoutTypeId}`] || (myLog?.value !== null && myLog?.value !== undefined ? String(myLog.value) : "")}
-                              onChange={(e) => setRoundsForm({ ...roundsForm, [`${sess.id}_${w.workoutTypeId}`]: e.target.value })}
-                            />
-                            <button
-                              type="button"
-                              disabled={isEnded || myLog?.status === "APPROVED"}
-                              onClick={() => {
-                                const val = roundsForm[`${sess.id}_${w.workoutTypeId}`];
-                                submitSessionLog(sess.id, w.workoutTypeId, true, val ? Number(val) : undefined);
-                              }}
-                              className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Log Rounds
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={isEnded || myLog?.status === "APPROVED"}
-                            onClick={() => submitSessionLog(sess.id, w.workoutTypeId, !myLog?.completed)}
-                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                              myLog?.completed ? "bg-green-600 hover:bg-green-500 text-white" : "btn-gold"
-                            }`}
-                          >
-                            {myLog?.completed ? "Completed (Undo)" : "Mark Completed"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
-      <form onSubmit={submit} className="stat-card grid md:grid-cols-3 gap-4 mb-8">
-        <label className="block md:col-span-3">
-          <span className="label">Workout type</span>
-          <select
-            className="input-field"
-            value={form.workoutTypeId}
-            required
-            onChange={(e) => setForm({ ...form, workoutTypeId: e.target.value })}
-          >
-            <option value="">Select workout type</option>
-            {types.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name} ({type.points} pts)
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {selectedType && (
-          <div className="md:col-span-3 text-sm text-white/50">
-            Selected type awards <strong>{selectedType.points} points</strong>.
+      {/* ── Ended Sessions (recent) ── */}
+      {endedSessions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-display font-semibold mb-3 text-white/60">Past Sessions</h2>
+          <div className="space-y-3">
+            {endedSessions.slice(0, 5).map((sess) => {
+              const myLogs = sess.athleteLogs?.filter((l: any) => l.userId === me?.id) || [];
+              return (
+                <div key={sess.id} className="stat-card border border-white/5 opacity-70">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="font-medium text-white text-sm">{sess.title}</span>
+                      <span className="text-[10px] ml-2 px-2 py-0.5 rounded bg-white/10 text-white/40 font-bold uppercase">Ended</span>
+                    </div>
+                    <span className="text-xs text-white/30">{sess.sport?.name} · {new Date(sess.startTime).toLocaleDateString()}</span>
+                  </div>
+                  {sess.workouts.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {sess.workouts.map((w: any) => {
+                        const exName = w.customName || w.workoutType?.name || "Exercise";
+                        const myLog = myLogs.find((l: any) =>
+                          l.customExerciseName === exName || l.workoutTypeId === w.workoutTypeId
+                        );
+                        return (
+                          <span key={w.id} className={`text-[11px] px-2.5 py-1 rounded-full border ${
+                            myLog ? (myLog.status === "APPROVED" ? "border-green-500/30 bg-green-500/10 text-green-300" :
+                              "border-yellow-500/30 bg-yellow-500/10 text-yellow-300") :
+                            "border-red-500/20 bg-red-500/10 text-red-400"
+                          }`}>
+                            {exName} {myLog ? "✓" : "✗ Absent"}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
-
-        <Input label="Exercise details" value={form.exercise} onChange={(v) => setForm({ ...form, exercise: v })} />
-        <Input label="Duration (min)" value={form.durationMin} onChange={(v) => setForm({ ...form, durationMin: v })} type="number" />
-        <Input label="Sets" value={form.sets} onChange={(v) => setForm({ ...form, sets: v })} type="number" />
-        <Input label="Reps" value={form.reps} onChange={(v) => setForm({ ...form, reps: v })} type="number" />
-        <Input label="Weight (kg)" value={form.weightKg} onChange={(v) => setForm({ ...form, weightKg: v })} type="number" />
-        <Input label="Calories" value={form.calories} onChange={(v) => setForm({ ...form, calories: v })} type="number" />
-        <div className="md:col-span-3">
-          <Input label="Notes" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
         </div>
-        <div className="md:col-span-3">
-          <button type="submit" disabled={loading} className="btn-gold">Log workout</button>
-        </div>
-      </form>
+      )}
 
-      <h2 className="font-display font-semibold mb-3">History</h2>
-      <div className="space-y-2">
-        {workouts.map((w) => (
-          <div key={w.id} className="stat-card flex justify-between items-center">
-            <div>
-              <p className="font-medium">{w.name}</p>
-              <p className="text-xs text-white/40">
-                {[w.sets && `${w.sets} sets`, w.reps && `${w.reps} reps`, w.durationMin && `${w.durationMin} min`].filter(Boolean).join(" · ")}
-              </p>
+      {/* ── Personal Workout History ── */}
+      <div>
+        <h2 className="font-display font-semibold mb-3">My Workout History</h2>
+        <div className="space-y-3">
+          {workouts.map((w) => (
+            <div key={w.id} className="stat-card hover:border-gold/10 transition-all">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-white">{w.name}</p>
+                  <p className="text-xs text-white/40 mt-1">
+                    {[
+                      w.exercise,
+                      w.sets && `${w.sets} sets`,
+                      w.reps && `${w.reps} reps`,
+                      w.weightKg && `${w.weightKg} kg`,
+                      w.durationMin && `${w.durationMin} min`,
+                      w.calories && `${w.calories} cal`,
+                    ].filter(Boolean).join(" · ")}
+                  </p>
+                  {w.notes && <p className="text-xs text-white/30 mt-1 italic">{w.notes}</p>}
+                </div>
+                <span className="text-xs text-white/30 shrink-0">{new Date(w.createdAt).toLocaleDateString()}</span>
+              </div>
             </div>
-            <span className="text-xs text-white/40">{new Date(w.createdAt).toLocaleDateString()}</span>
-          </div>
-        ))}
-        {workouts.length === 0 && <p className="text-sm text-white/40">No workouts yet.</p>}
+          ))}
+          {workouts.length === 0 && (
+            <div className="stat-card text-center py-10">
+              <p className="text-white/40 text-sm">No personal workouts logged yet.</p>
+              <button onClick={() => setShowLogForm(true)} className="btn-gold text-sm mt-4 mx-auto">
+                Log your first workout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  );
-}
-
-function Input({ label, value, onChange, type = "text", required = false }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="label">{label}</span>
-      <input className="input-field" type={type} value={value} required={required} onChange={(e) => onChange(e.target.value)} />
-    </label>
   );
 }
