@@ -144,20 +144,21 @@ export default function CaptainSessionsPage() {
     }
   }
 
-  async function handleReviewLog(sessionId: string, logId: string, status: "APPROVED" | "REJECTED") {
+  async function handleReviewLog(sessionId: string, userId: string, status: "APPROVED" | "REJECTED") {
     setError("");
     setMessage("");
     try {
       await api(`/api/admin-features/sessions/${sessionId}/review-logs`, {
         method: "POST",
-        body: JSON.stringify({ reviews: [{ logId, status }] }),
+        body: JSON.stringify({ reviews: [{ userId, status }] }),
       });
-      setMessage(`Log ${status.toLowerCase()}.`);
+      setMessage(`Logs ${status.toLowerCase()} for the player.`);
       await load();
     } catch (err: any) {
       setError(err.message);
     }
   }
+
 
   function handleExportCSV() {
     const dataToExport = sessions.flatMap((sess) =>
@@ -173,18 +174,70 @@ export default function CaptainSessionsPage() {
   }
 
   function handleExportPDF() {
-    const headers = ["Session Title", "Start Time", "Athlete Name", "Exercise", "Quantity"];
-    const rows = sessions.flatMap((sess) =>
-      sess.athleteLogs.map((log: any) => [
-        sess.title,
-        new Date(sess.startTime).toLocaleString(),
-        log.user.fullName,
-        log.customExerciseName || log.workoutType?.name || "—",
-        log.value !== null && log.value !== undefined ? `${log.value}` : "Done",
-      ])
+    // 1. Gather all unique exercise names across all loaded sessions to build dynamic columns
+    const allExercises = Array.from(
+      new Set(
+        sessions.flatMap((sess) =>
+          sess.workouts.map((w: any) => w.customName || w.workoutType?.name || "Exercise")
+        )
+      )
     );
+
+    // 2. Define structured headers
+    const headers = [
+      "Session Name",
+      "Timing (Start - End)",
+      "Athletic ID",
+      "Athlete Name",
+      ...allExercises,
+    ];
+
+    // 3. Populate rows, grouping by user per session
+    const rows: any[][] = [];
+    sessions.forEach((sess) => {
+      // Find all unique users who submitted logs in this session
+      const userIds = Array.from(new Set(sess.athleteLogs.map((log: any) => log.userId)));
+
+      userIds.forEach((uId) => {
+        const userLogs = sess.athleteLogs.filter((log: any) => log.userId === uId);
+        if (userLogs.length === 0) return;
+
+        const firstLog = userLogs[0];
+        const athleteId = firstLog.user.uniqueId;
+        const athleteName = firstLog.user.fullName;
+
+        // Start time and an estimated 1-hour end time since sessions don't store strict endTime
+        const start = new Date(sess.startTime);
+        const end = new Date(start.getTime() + 60 * 60 * 1000);
+        const timingStr = `${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+
+        // Create the base row cells
+        const rowCells = [
+          sess.title,
+          timingStr,
+          athleteId,
+          athleteName,
+        ];
+
+        // Add matching values for each exercise column
+        allExercises.forEach((exName) => {
+          const logForEx = userLogs.find(
+            (l: any) => (l.customExerciseName || l.workoutType?.name) === exName
+          );
+          if (logForEx) {
+            rowCells.push(logForEx.value !== null && logForEx.value !== undefined ? `${logForEx.value}` : "Completed");
+          } else {
+            rowCells.push("—");
+          }
+        });
+
+        rows.push(rowCells);
+      });
+    });
+
     printReport(`${mySport.name} - Training Sessions Log`, headers, rows);
   }
+
 
   if (loading) {
     return <div className="text-white/40 text-center py-10">Loading sessions...</div>;
@@ -374,50 +427,74 @@ export default function CaptainSessionsPage() {
               </div>
 
               {/* Athlete Submissions */}
-              {sess.athleteLogs?.length > 0 && (
-                <div className="border-t border-white/5 pt-3">
-                  <p className="text-xs text-white/40 font-semibold mb-2 uppercase">
-                    Athlete Submissions ({sess.athleteLogs.length})
-                  </p>
-                  <div className="space-y-2 text-xs text-white/70">
-                    {sess.athleteLogs.map((log: any) => (
-                      <div key={log.id} className="flex items-center justify-between border-b border-white/5 py-1.5 flex-wrap gap-2">
-                        <div>
-                          <span className="font-medium text-white">{log.user.fullName}</span>
-                          <span className="text-white/40 ml-1.5">— {log.customExerciseName || log.workoutType?.name}</span>
-                          {log.value !== null && log.value !== undefined && (
-                            <span className="text-gold ml-2 font-medium">{log.value}</span>
-                          )}
+              {sess.athleteLogs?.length > 0 && (() => {
+                // Group logs by userId
+                const groupedLogs: Record<string, { user: any; logs: any[]; status: string }> = {};
+                sess.athleteLogs.forEach((log: any) => {
+                  if (!groupedLogs[log.userId]) {
+                    groupedLogs[log.userId] = {
+                      user: log.user,
+                      logs: [],
+                      status: log.status
+                    };
+                  }
+                  groupedLogs[log.userId].logs.push(log);
+                  // If any is PENDING, overall is PENDING, otherwise match the common status
+                  if (log.status === "PENDING") {
+                    groupedLogs[log.userId].status = "PENDING";
+                  }
+                });
+
+                return (
+                  <div className="border-t border-white/5 pt-3">
+                    <p className="text-xs text-white/40 font-semibold mb-2 uppercase">
+                      Athlete Submissions ({Object.keys(groupedLogs).length})
+                    </p>
+                    <div className="space-y-2 text-xs text-white/70">
+                      {Object.values(groupedLogs).map((group: any) => (
+                        <div key={group.user.id} className="flex items-center justify-between border-b border-white/5 py-2 flex-wrap gap-2">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <span className="font-semibold text-white block">{group.user.fullName} ({group.user.uniqueId})</span>
+                            <div className="text-[10px] text-white/45 mt-0.5 space-x-1.5 truncate">
+                              {group.logs.map((log: any, idx: number) => (
+                                <span key={log.id}>
+                                  {idx > 0 && " • "}
+                                  {log.customExerciseName || log.workoutType?.name}:{" "}
+                                  <span className="text-gold font-medium">{log.value !== null && log.value !== undefined ? log.value : "Done"}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {group.status === "PENDING" ? (
+                              <>
+                                <button
+                                  onClick={() => handleReviewLog(sess.id, group.user.id, "APPROVED")}
+                                  className="text-[10px] bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded font-medium hover:bg-green-500/30"
+                                >
+                                  Approve All
+                                </button>
+                                <button
+                                  onClick={() => handleReviewLog(sess.id, group.user.id, "REJECTED")}
+                                  className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-medium hover:bg-red-500/30"
+                                >
+                                  Reject All
+                                </button>
+                              </>
+                            ) : (
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${
+                                group.status === "APPROVED" ? "text-green-400" : "text-red-400"
+                              }`}>
+                                {group.status}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {log.status === "PENDING" ? (
-                            <>
-                              <button
-                                onClick={() => handleReviewLog(sess.id, log.id, "APPROVED")}
-                                className="text-[10px] bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded font-medium hover:bg-green-500/30"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleReviewLog(sess.id, log.id, "REJECTED")}
-                                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-medium hover:bg-red-500/30"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          ) : (
-                            <span className={`text-[10px] uppercase font-bold tracking-wider ${
-                              log.status === "APPROVED" ? "text-green-400" : "text-red-400"
-                            }`}>
-                              {log.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           ))}
           {sessions.length === 0 && <p className="text-sm text-white/40">No sessions logged yet.</p>}

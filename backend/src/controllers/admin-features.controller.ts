@@ -433,7 +433,7 @@ export async function endMeeting(req: AuthedRequest, res: Response) {
 
 const reviewSessionLogsSchema = z.object({
   reviews: z.array(z.object({
-    logId: z.string().min(1),
+    userId: z.string().min(1),
     status: z.enum(["APPROVED", "REJECTED"]),
   })).min(1),
 });
@@ -452,39 +452,40 @@ export async function reviewSessionLogs(req: AuthedRequest, res: Response) {
     }
 
     for (const item of parsed.data.reviews) {
-      const log = await prisma.athleteSessionLog.findUnique({
-        where: { id: item.logId },
+      // Find all logs for this user in this session
+      const logs = await prisma.athleteSessionLog.findMany({
+        where: { sessionId, userId: item.userId },
         include: { workoutType: true },
       });
 
-      if (!log || log.sessionId !== sessionId) continue;
-
-      await prisma.athleteSessionLog.update({
-        where: { id: log.id },
-        data: { status: item.status },
-      });
-
-      if (item.status === "APPROVED") {
-        const existingLedger = await prisma.pointsLedger.findFirst({
-          where: { reason: "SESSION_WORKOUT", refId: log.id },
+      for (const log of logs) {
+        await prisma.athleteSessionLog.update({
+          where: { id: log.id },
+          data: { status: item.status },
         });
 
-        if (!existingLedger) {
-          // Award base points (10) for custom exercises, or workoutType points if available
-          const points = log.workoutType?.points ?? 10;
-          await prisma.pointsLedger.create({
-            data: {
-              userId: log.userId,
-              points,
-              reason: "SESSION_WORKOUT",
-              refId: log.id,
-            },
+        if (item.status === "APPROVED") {
+          const existingLedger = await prisma.pointsLedger.findFirst({
+            where: { reason: "SESSION_WORKOUT", refId: log.id },
+          });
+
+          if (!existingLedger) {
+            // Award base points (10) for custom exercises, or workoutType points if available
+            const points = log.workoutType?.points ?? 10;
+            await prisma.pointsLedger.create({
+              data: {
+                userId: log.userId,
+                points,
+                reason: "SESSION_WORKOUT",
+                refId: log.id,
+              },
+            });
+          }
+        } else {
+          await prisma.pointsLedger.deleteMany({
+            where: { reason: "SESSION_WORKOUT", refId: log.id },
           });
         }
-      } else {
-        await prisma.pointsLedger.deleteMany({
-          where: { reason: "SESSION_WORKOUT", refId: log.id },
-        });
       }
     }
 
@@ -494,3 +495,4 @@ export async function reviewSessionLogs(req: AuthedRequest, res: Response) {
     res.status(500).json({ error: "Failed to review session logs" });
   }
 }
+
