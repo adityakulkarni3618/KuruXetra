@@ -229,38 +229,36 @@ export default function WorkoutsPage() {
                       <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface p-3 rounded-lg border border-white/5 text-sm">
                         <div>
                           <span className="font-medium text-white">{exName}</span>
-                          {w.rounds && <span className="text-xs text-gold ml-2">(Rounds tracked)</span>}
                           {isLogged && (
                             <span className={`text-xs ml-2 font-medium ${
                               myLog.status === "APPROVED" ? "text-green-400" :
                               myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
                             }`}>
-                              ✓ {myLog.value ? `${myLog.value} rounds` : "Completed"} ({myLog.status})
+                              ✓ {myLog.value ? `${myLog.value} completed` : "Done"} ({myLog.status})
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
                           {!isLogged ? (
                             <>
-                              {w.rounds && (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Rounds"
-                                  className="input-field text-xs py-1.5 px-3 max-w-[80px]"
-                                  value={roundsForm[key] || ""}
-                                  onChange={(e) => setRoundsForm({ ...roundsForm, [key]: e.target.value })}
-                                />
-                              )}
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="How many?"
+                                className="input-field text-xs py-1.5 px-3 w-28"
+                                value={roundsForm[key] || ""}
+                                onChange={(e) => setRoundsForm({ ...roundsForm, [key]: e.target.value })}
+                              />
                               <button
                                 type="button"
                                 onClick={() => submitSessionLog(
-                                  sess.id, w.id, exName, w.rounds,
+                                  sess.id, w.id, exName, true,
                                   roundsForm[key] ? Number(roundsForm[key]) : undefined
                                 )}
-                                className="btn-gold text-xs px-3 py-1.5"
+                                disabled={!roundsForm[key]}
+                                className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40"
                               >
-                                {w.rounds ? "Log Rounds" : "Mark Done ✓"}
+                                Submit ✓
                               </button>
                             </>
                           ) : (

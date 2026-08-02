@@ -51,7 +51,7 @@ export default function SportsPage() {
     setDetailLoading(false);
   }
 
-  async function logExercise(sessionId: string, workoutId: string, exerciseName: string, rounds: boolean) {
+  async function logExercise(sessionId: string, workoutId: string, exerciseName: string, _rounds: boolean) {
     const key = `${sessionId}-${workoutId}`;
     const state = logStates[key] || { value: "", completed: false, submitted: false };
     try {
@@ -60,12 +60,11 @@ export default function SportsPage() {
         body: JSON.stringify({
           sessionWorkoutId: workoutId,
           completed: true,
-          value: rounds && state.value ? parseFloat(state.value) : undefined,
+          value: state.value ? parseFloat(state.value) : undefined,
         }),
       });
       setLogStates((prev) => ({ ...prev, [key]: { ...state, submitted: true } }));
       setMessage(`Logged: ${exerciseName}`);
-      // Refresh
       if (selectedSport) openSportDetail(selectedSport);
     } catch (err: any) {
       setMessage(err.message);
@@ -221,31 +220,27 @@ export default function SportsPage() {
                             return (
                               <div key={w.id} className="bg-surface/60 rounded-lg border border-white/5 p-3">
                                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                                  <div>
-                                    <p className="text-sm font-medium text-white">{exName}</p>
-                                    {w.rounds && <p className="text-xs text-white/40">Rounds tracked</p>}
-                                  </div>
+                                  <p className="text-sm font-medium text-white">{exName}</p>
 
                                   {isActive && !alreadyLogged ? (
                                     <div className="flex items-center gap-2">
-                                      {w.rounds && (
-                                        <input
-                                          type="number"
-                                          min="1"
-                                          placeholder="Rounds"
-                                          className="input-field text-xs w-20 py-1.5"
-                                          value={localState.value}
-                                          onChange={(e) => setLogStates((prev) => ({
-                                            ...prev,
-                                            [key]: { ...localState, value: e.target.value }
-                                          }))}
-                                        />
-                                      )}
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="How many?"
+                                        className="input-field text-xs w-28 py-1.5"
+                                        value={localState.value}
+                                        onChange={(e) => setLogStates((prev) => ({
+                                          ...prev,
+                                          [key]: { ...localState, value: e.target.value }
+                                        }))}
+                                      />
                                       <button
-                                        onClick={() => logExercise(sess.id, w.id, exName, w.rounds)}
-                                        className="btn-gold text-xs px-3 py-1.5"
+                                        onClick={() => logExercise(sess.id, w.id, exName, true)}
+                                        disabled={!localState.value}
+                                        className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40"
                                       >
-                                        Mark Done ✓
+                                        Submit ✓
                                       </button>
                                     </div>
                                   ) : alreadyLogged ? (
@@ -257,7 +252,7 @@ export default function SportsPage() {
                                         {myLog?.status === "APPROVED" ? "✓ Approved" :
                                          myLog?.status === "REJECTED" ? "✗ Rejected" : "✓ Submitted"}
                                       </span>
-                                      {myLog?.value && <p className="text-xs text-white/40">{myLog.value} rounds</p>}
+                                      {myLog?.value && <p className="text-xs text-white/40">{myLog.value} completed</p>}
                                     </div>
                                   ) : (
                                     <span className="text-xs text-white/30">Session ended</span>

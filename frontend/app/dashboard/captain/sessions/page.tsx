@@ -11,7 +11,7 @@ export default function CaptainSessionsPage() {
   const [sessionForm, setSessionForm] = useState({
     title: "",
     startTime: "",
-    exercises: [] as { name: string; rounds: boolean }[],
+    exercises: [] as { name: string }[],
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -20,7 +20,6 @@ export default function CaptainSessionsPage() {
   // Per-session "add exercise" state
   const [addExerciseSessionId, setAddExerciseSessionId] = useState<string | null>(null);
   const [addExerciseName, setAddExerciseName] = useState("");
-  const [addExerciseRounds, setAddExerciseRounds] = useState(false);
   const [addExerciseLoading, setAddExerciseLoading] = useState(false);
 
   async function load() {
@@ -41,15 +40,13 @@ export default function CaptainSessionsPage() {
     }
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   // ── Form exercise helpers ──────────────────────────────────────────────────
   const addExerciseToForm = () => {
     setSessionForm((prev) => ({
       ...prev,
-      exercises: [...prev.exercises, { name: "", rounds: false }],
+      exercises: [...prev.exercises, { name: "" }],
     }));
   };
 
@@ -60,10 +57,10 @@ export default function CaptainSessionsPage() {
     }));
   };
 
-  const updateExerciseInForm = (index: number, field: string, val: any) => {
+  const updateExerciseInForm = (index: number, val: string) => {
     setSessionForm((prev) => {
       const copy = [...prev.exercises];
-      copy[index] = { ...copy[index], [field]: val };
+      copy[index] = { name: val };
       return { ...prev, exercises: copy };
     });
   };
@@ -88,7 +85,7 @@ export default function CaptainSessionsPage() {
           sportId: mySport.id,
           title: sessionForm.title,
           startTime: sessionForm.startTime,
-          exercises: sessionForm.exercises.map((e) => ({ name: e.name.trim(), rounds: e.rounds })),
+          exercises: sessionForm.exercises.map((e) => ({ name: e.name.trim(), rounds: false })),
         }),
       });
       setSessionForm({ title: "", startTime: "", exercises: [] });
@@ -108,10 +105,9 @@ export default function CaptainSessionsPage() {
     try {
       await api(`/api/admin-features/sessions/${sessionId}/add-exercise`, {
         method: "POST",
-        body: JSON.stringify({ name: addExerciseName.trim(), rounds: addExerciseRounds }),
+        body: JSON.stringify({ name: addExerciseName.trim(), rounds: false }),
       });
       setAddExerciseName("");
-      setAddExerciseRounds(false);
       setAddExerciseSessionId(null);
       setMessage("Exercise added to session.");
       await load();
@@ -154,9 +150,7 @@ export default function CaptainSessionsPage() {
     try {
       await api(`/api/admin-features/sessions/${sessionId}/review-logs`, {
         method: "POST",
-        body: JSON.stringify({
-          reviews: [{ logId, status }]
-        }),
+        body: JSON.stringify({ reviews: [{ logId, status }] }),
       });
       setMessage(`Log ${status.toLowerCase()}.`);
       await load();
@@ -172,24 +166,24 @@ export default function CaptainSessionsPage() {
         "Start Time": new Date(sess.startTime).toLocaleString(),
         "Athlete Name": log.user.fullName,
         "Exercise": log.customExerciseName || log.workoutType?.name || "—",
-        "Rounds / Status": log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
+        "Quantity": log.value !== null && log.value !== undefined ? log.value : "Done",
       }))
     );
     exportToCSV(dataToExport, `${mySport.name}_Session_Logs`);
   }
 
   function handleExportPDF() {
-    const headers = ["Session Title", "Start Time", "Athlete Name", "Exercise", "Rounds/Status"];
+    const headers = ["Session Title", "Start Time", "Athlete Name", "Exercise", "Quantity"];
     const rows = sessions.flatMap((sess) =>
       sess.athleteLogs.map((log: any) => [
         sess.title,
         new Date(sess.startTime).toLocaleString(),
         log.user.fullName,
         log.customExerciseName || log.workoutType?.name || "—",
-        log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
+        log.value !== null && log.value !== undefined ? `${log.value}` : "Done",
       ])
     );
-    printReport(`${mySport.name} - Training Sessions Log Report`, headers, rows);
+    printReport(`${mySport.name} - Training Sessions Log`, headers, rows);
   }
 
   if (loading) {
@@ -208,7 +202,7 @@ export default function CaptainSessionsPage() {
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>
           <h1 className="font-display text-2xl font-bold mb-1 text-white">Conditioning Sessions</h1>
-          <p className="text-white/50 text-sm">Create conditioning sessions and monitor athlete logs for {mySport?.name}.</p>
+          <p className="text-white/50 text-sm">Create sessions and monitor athlete logs for {mySport?.name}.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={handleExportCSV} className="btn-primary text-xs px-3.5 py-2">Export CSV</button>
@@ -259,35 +253,24 @@ export default function CaptainSessionsPage() {
               </div>
 
               {sessionForm.exercises.length === 0 && (
-                <p className="text-xs text-white/30 text-center py-3 border border-dashed border-white/10 rounded-lg">
+                <p className="text-xs text-white/30 text-center py-4 border border-dashed border-white/10 rounded-lg">
                   Click "Add Exercise" to add exercises to this session
                 </p>
               )}
 
               {sessionForm.exercises.map((ex, index) => (
-                <div key={index} className="flex gap-3 items-start bg-surface p-3 rounded-lg border border-white/5 mb-2">
-                  <div className="flex-1 space-y-2">
-                    <input
-                      className="input-field text-xs"
-                      placeholder="Exercise name (e.g. Push-ups, Sprints, Squats)"
-                      value={ex.name}
-                      onChange={(e) => updateExerciseInForm(index, "name", e.target.value)}
-                      required
-                    />
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ex.rounds}
-                        onChange={(e) => updateExerciseInForm(index, "rounds", e.target.checked)}
-                        className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
-                      />
-                      <span className="text-xs text-white/60">Track rounds</span>
-                    </label>
-                  </div>
+                <div key={index} className="flex gap-2 items-center mb-2">
+                  <input
+                    className="input-field text-sm flex-1"
+                    placeholder={`Exercise ${index + 1} (e.g. Push-ups, Running, Squats)`}
+                    value={ex.name}
+                    onChange={(e) => updateExerciseInForm(index, e.target.value)}
+                    required
+                  />
                   <button
                     type="button"
                     onClick={() => removeExerciseFromForm(index)}
-                    className="text-xs text-red-400 hover:text-red-300 mt-1 p-1"
+                    className="text-red-400 hover:text-red-300 p-2 flex-shrink-0"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
@@ -304,6 +287,7 @@ export default function CaptainSessionsPage() {
           <h2 className="font-display font-semibold text-white">Training Sessions Log ({sessions.length})</h2>
           {sessions.map((sess) => (
             <div key={sess.id} className="stat-card border border-white/5 hover:border-gold/10 transition-all">
+              {/* Header */}
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -314,16 +298,13 @@ export default function CaptainSessionsPage() {
                       {sess.status}
                     </span>
                   </div>
-                  <p className="text-xs text-white/40 mt-0.5">
-                    {new Date(sess.startTime).toLocaleString()}
-                  </p>
+                  <p className="text-xs text-white/40 mt-0.5">{new Date(sess.startTime).toLocaleString()}</p>
                 </div>
                 <div className="flex gap-2">
                   {sess.status === "ACTIVE" && (
                     <button
                       onClick={() => handleEndSession(sess.id)}
                       className="text-xs text-gold border border-gold/20 bg-gold/10 px-2 py-0.5 rounded hover:bg-gold/20 transition-all font-medium"
-                      type="button"
                     >
                       End Session
                     </button>
@@ -331,24 +312,21 @@ export default function CaptainSessionsPage() {
                   <button
                     onClick={() => handleDeleteSession(sess.id)}
                     className="text-xs text-red-400 hover:text-red-300"
-                    type="button"
                   >
                     Delete
                   </button>
                 </div>
               </div>
 
-              {/* Exercises List */}
+              {/* Exercises */}
               <div className="mt-4 border-t border-white/5 pt-3">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-white/40 font-semibold uppercase">Exercises ({sess.workouts.length})</p>
                   {sess.status === "ACTIVE" && (
                     <button
-                      type="button"
                       onClick={() => {
                         setAddExerciseSessionId(addExerciseSessionId === sess.id ? null : sess.id);
                         setAddExerciseName("");
-                        setAddExerciseRounds(false);
                       }}
                       className="text-[10px] text-gold border border-gold/20 bg-gold/10 hover:bg-gold/20 px-2.5 py-1 rounded transition-colors flex items-center gap-1"
                     >
@@ -359,53 +337,37 @@ export default function CaptainSessionsPage() {
                 </div>
 
                 <ul className="space-y-1.5 mb-3">
-                  {sess.workouts.map((w: any) => (
+                  {sess.workouts.map((w: any, i: number) => (
                     <li key={w.id} className="flex items-center gap-2 text-sm text-white/70">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gold/60 shrink-0" />
+                      <span className="text-xs text-white/30 w-4 shrink-0">{i + 1}.</span>
+                      <span className="w-2 h-2 rounded-full bg-gold/50 shrink-0" />
                       {w.customName || w.workoutType?.name}
-                      {w.rounds && <span className="text-[10px] text-white/30 ml-1">(rounds tracked)</span>}
                     </li>
                   ))}
-                  {sess.workouts.length === 0 && (
-                    <li className="text-xs text-white/30">No exercises yet.</li>
-                  )}
+                  {sess.workouts.length === 0 && <li className="text-xs text-white/30">No exercises yet.</li>}
                 </ul>
 
-                {/* Inline add-exercise form (only for active session) */}
+                {/* Inline add-exercise form */}
                 {addExerciseSessionId === sess.id && (
                   <div className="bg-surface/60 border border-white/10 rounded-lg p-3 mb-3 space-y-2">
                     <input
-                      className="input-field text-xs"
+                      className="input-field text-sm"
                       placeholder="Exercise name (e.g. Sprints, Plank, Dribbling)"
                       value={addExerciseName}
                       onChange={(e) => setAddExerciseName(e.target.value)}
                       autoFocus
                     />
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={addExerciseRounds}
-                          onChange={(e) => setAddExerciseRounds(e.target.checked)}
-                          className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
-                        />
-                        <span className="text-xs text-white/60">Track rounds</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setAddExerciseSessionId(null)}
-                          className="text-xs text-white/40 hover:text-white/70 px-2 py-1"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleAddExerciseToSession(sess.id)}
-                          disabled={addExerciseLoading || !addExerciseName.trim()}
-                          className="btn-gold text-xs px-3 py-1.5"
-                        >
-                          {addExerciseLoading ? "Adding..." : "Add"}
-                        </button>
-                      </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setAddExerciseSessionId(null)} className="text-xs text-white/40 hover:text-white/70 px-3 py-1.5">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleAddExerciseToSession(sess.id)}
+                        disabled={addExerciseLoading || !addExerciseName.trim()}
+                        className="btn-gold text-xs px-3 py-1.5"
+                      >
+                        {addExerciseLoading ? "Adding..." : "Add"}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -414,29 +376,31 @@ export default function CaptainSessionsPage() {
               {/* Athlete Submissions */}
               {sess.athleteLogs?.length > 0 && (
                 <div className="border-t border-white/5 pt-3">
-                  <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Athlete Submissions</p>
+                  <p className="text-xs text-white/40 font-semibold mb-2 uppercase">
+                    Athlete Submissions ({sess.athleteLogs.length})
+                  </p>
                   <div className="space-y-2 text-xs text-white/70">
                     {sess.athleteLogs.map((log: any) => (
                       <div key={log.id} className="flex items-center justify-between border-b border-white/5 py-1.5 flex-wrap gap-2">
                         <div>
                           <span className="font-medium text-white">{log.user.fullName}</span>
-                          <span className="text-white/40 ml-1">({log.customExerciseName || log.workoutType?.name})</span>
-                          <span className="text-gold ml-2">
-                            {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
-                          </span>
+                          <span className="text-white/40 ml-1.5">— {log.customExerciseName || log.workoutType?.name}</span>
+                          {log.value !== null && log.value !== undefined && (
+                            <span className="text-gold ml-2 font-medium">{log.value}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           {log.status === "PENDING" ? (
                             <>
                               <button
                                 onClick={() => handleReviewLog(sess.id, log.id, "APPROVED")}
-                                className="text-[10px] bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded font-medium hover:bg-green-500/30 transition-all"
+                                className="text-[10px] bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded font-medium hover:bg-green-500/30"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReviewLog(sess.id, log.id, "REJECTED")}
-                                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-medium hover:bg-red-500/30 transition-all"
+                                className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-medium hover:bg-red-500/30"
                               >
                                 Reject
                               </button>
