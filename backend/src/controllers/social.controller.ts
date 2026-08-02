@@ -75,6 +75,8 @@ export async function togglePrivacy(req: AuthedRequest, res: Response) {
 const postSchema = z.object({
   content: z.string().min(1),
   imageUrl: z.string().url().optional(),
+  isGlobal: z.boolean().optional(),
+  targetSportId: z.string().nullable().optional(),
 });
 
 export async function createPost(req: AuthedRequest, res: Response) {
@@ -87,6 +89,8 @@ export async function createPost(req: AuthedRequest, res: Response) {
         userId: req.user!.id,
         content: parsed.data.content,
         imageUrl: parsed.data.imageUrl || null,
+        isGlobal: parsed.data.isGlobal ?? true,
+        targetSportId: parsed.data.targetSportId || null,
       },
       include: {
         user: { select: { id: true, fullName: true, uniqueId: true, profilePhotoUrl: true } },
@@ -120,8 +124,26 @@ export async function listUserPosts(req: AuthedRequest, res: Response) {
       return res.status(403).json({ error: "This profile is private." });
     }
 
+    // Get viewer's approved memberships
+    const viewerMemberships = await prisma.membership.findMany({
+      where: { userId: viewerId, status: "APPROVED" },
+      select: { sportId: true }
+    });
+    const approvedSportIds = viewerMemberships.map(m => m.sportId);
+
     const posts = await prisma.post.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        OR: [
+          { isGlobal: true },
+          { 
+            isGlobal: false, 
+            targetSportId: { in: approvedSportIds } 
+          },
+          // Author or admin can see everything
+          ...(isSelf || isViewerAdmin ? [{ userId }] : [])
+        ]
+      },
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, fullName: true, uniqueId: true, profilePhotoUrl: true } },
@@ -201,13 +223,20 @@ export async function sharePost(req: AuthedRequest, res: Response) {
 
 // Status Updates (WhatsApp style)
 export async function createStatus(req: AuthedRequest, res: Response) {
-  const { mediaUrl, caption } = req.body as { mediaUrl?: string; caption?: string };
+  const { mediaUrl, caption, isGlobal, targetSportId } = req.body as { 
+    mediaUrl?: string; 
+    caption?: string;
+    isGlobal?: boolean;
+    targetSportId?: string;
+  };
   try {
     const status = await prisma.statusUpdate.create({
       data: {
         userId: req.user!.id,
         mediaUrl: mediaUrl || null,
         caption: caption || null,
+        isGlobal: isGlobal ?? true,
+        targetSportId: targetSportId || null,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours expiry
       },
     });
@@ -220,17 +249,33 @@ export async function createStatus(req: AuthedRequest, res: Response) {
 // Retrieve active statuses of athletes in the same sports / all active public athletes
 export async function listActiveStatuses(req: AuthedRequest, res: Response) {
   const now = new Date();
+  const viewerId = req.user!.id;
   try {
-    // Return all unexpired statuses of public profiles or team members
+    // Get viewer's approved memberships
+    const viewerMemberships = await prisma.membership.findMany({
+      where: { userId: viewerId, status: "APPROVED" },
+      select: { sportId: true }
+    });
+    const approvedSportIds = viewerMemberships.map(m => m.sportId);
+
+    // Return all unexpired statuses matching visibility scopes
     const statuses = await prisma.statusUpdate.findMany({
       where: {
         expiresAt: { gt: now },
         user: {
           OR: [
             { isPublic: true },
-            { memberships: { some: { userId: req.user!.id } } }, // same team check
+            { memberships: { some: { userId: viewerId } } },
           ],
         },
+        OR: [
+          { isGlobal: true },
+          { 
+            isGlobal: false, 
+            targetSportId: { in: approvedSportIds } 
+          },
+          { userId: viewerId } // always see own status
+        ]
       },
       orderBy: { createdAt: "desc" },
       include: {

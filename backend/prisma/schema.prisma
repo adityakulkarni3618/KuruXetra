@@ -314,15 +314,17 @@ model UserBadge {
 }
 
 model Post {
-  id           String        @id @default(cuid())
-  userId       String
-  content      String
-  imageUrl     String?
-  sharesCount  Int           @default(0)
-  createdAt    DateTime      @default(now())
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes        PostLike[]
-  comments     PostComment[]
+  id            String        @id @default(cuid())
+  userId        String
+  content       String
+  imageUrl      String?
+  sharesCount   Int           @default(0)
+  isGlobal      Boolean       @default(true)
+  targetSportId String?
+  createdAt     DateTime      @default(now())
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes         PostLike[]
+  comments      PostComment[]
 }
 
 model PostLike {
@@ -347,14 +349,16 @@ model PostComment {
 }
 
 model StatusUpdate {
-  id        String   @id @default(cuid())
-  userId    String
-  mediaUrl  String?
-  caption   String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  views     StatusView[]
+  id            String   @id @default(cuid())
+  userId        String
+  mediaUrl      String?
+  caption       String?
+  expiresAt     DateTime
+  isGlobal      Boolean  @default(true)
+  targetSportId String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views         StatusView[]
 }
 
 model StatusView {
