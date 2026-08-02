@@ -176,32 +176,8 @@ export default function OverviewPage() {
         </div>
       )}
 
-      {/* Top News & Announcements Row */}
-      {latestAnnouncements.length > 0 && (
-        <div className="stat-card mb-6 border border-blue-500/20 bg-blue-500/[0.01]">
-          <h2 className="font-display font-semibold text-white text-xs uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            📢 Latest Announcements & News
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {latestAnnouncements.map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedItem(item)}
-                className="bg-surface/65 border border-white/5 hover:border-gold/35 p-3 rounded-lg cursor-pointer transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <h3 className="text-xs font-semibold text-white truncate mb-1">{item.data.title}</h3>
-                  <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed">{item.data.body}</p>
-                </div>
-                <span className="text-[9px] text-gold font-medium mt-2 block">Read details &rarr;</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-
       {/* ── Statuses / Stories Bar (WhatsApp style) ── */}
+
       <div className="stat-card mb-8">
         <h2 className="font-display font-semibold text-white mb-3 text-sm flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -240,6 +216,69 @@ export default function OverviewPage() {
           })}
           {statuses.length === 0 && (
             <span className="text-xs text-white/30 italic pl-2">No active statuses from teammates.</span>
+          )}
+        </div>
+      </div>
+
+      {/* Top News & Announcements Row (Relocated below Status Updates) */}
+      {latestAnnouncements.length > 0 && (
+        <div className="stat-card mb-6 border border-blue-500/20 bg-blue-500/[0.01]">
+          <h2 className="font-display font-semibold text-white text-xs uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            📢 Latest Announcements & News
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {latestAnnouncements.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => setSelectedItem(item)}
+                className="bg-surface/65 border border-white/5 hover:border-gold/35 p-3 rounded-lg cursor-pointer transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="text-xs font-semibold text-white truncate mb-1">{item.data.title}</h3>
+                  <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed">{item.data.body}</p>
+                </div>
+                <span className="text-[9px] text-gold font-medium mt-2 block">Read details &rarr;</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notifications & Alerts Board (Relocated below Status Updates) */}
+      <div className="stat-card mb-8">
+        <h2 className="font-display font-semibold mb-3 text-white">Notifications & Alerts</h2>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+          {feedItems.map((item, idx) => {
+            const labelMap: Record<string, { badge: string; color: string }> = {
+              announcement: { badge: "📢 Announcement", color: "bg-blue/20 text-blue-300 border-blue-300/30" },
+              meeting: { badge: "🗓 Meeting", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+              session: { badge: "⚡ Practice Session", color: "bg-green-500/20 text-green-300 border-green-500/30" },
+            };
+            const config = labelMap[item.type];
+            return (
+              <div
+                key={idx}
+                onClick={() => setSelectedItem(item)}
+                className="p-3 bg-surface/50 border border-white/5 rounded-lg hover:border-gold/30 cursor-pointer transition-all flex items-start justify-between gap-3"
+              >
+                <div className="overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full border ${config.color}`}>
+                      {config.badge}
+                    </span>
+                    <span className="text-[10px] text-white/30">{item.date.toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-white truncate">{item.data.title || "Announcement"}</p>
+                  <p className="text-[10px] text-white/50 truncate mt-0.5">
+                    {item.type === "announcement" ? item.data.body : item.data.description || "View schedule details"}
+                  </p>
+                </div>
+                <span className="text-xs text-gold shrink-0 self-center">View Details &rarr;</span>
+              </div>
+            );
+          })}
+          {feedItems.length === 0 && (
+            <p className="text-xs text-white/40 italic py-4">No recent team notifications.</p>
           )}
         </div>
       </div>
@@ -392,45 +431,6 @@ export default function OverviewPage() {
             ) : (
               <p className="text-sm text-white/50">You're not checked in. Head to the Attendance tab when you arrive.</p>
             )}
-          </div>
-
-          {/* Notifications Board */}
-          <div className="stat-card">
-            <h2 className="font-display font-semibold mb-3 text-white">Notifications & Alerts</h2>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-              {feedItems.map((item, idx) => {
-                const labelMap: Record<string, { badge: string; color: string }> = {
-                  announcement: { badge: "📢 Announcement", color: "bg-blue/20 text-blue-300 border-blue-300/30" },
-                  meeting: { badge: "🗓 Meeting", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
-                  session: { badge: "⚡ Practice Session", color: "bg-green-500/20 text-green-300 border-green-500/30" },
-                };
-                const config = labelMap[item.type];
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedItem(item)}
-                    className="p-3 bg-surface/50 border border-white/5 rounded-lg hover:border-gold/30 cursor-pointer transition-all flex items-start justify-between gap-3"
-                  >
-                    <div className="overflow-hidden">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full border ${config.color}`}>
-                          {config.badge}
-                        </span>
-                        <span className="text-[10px] text-white/30">{item.date.toLocaleDateString()}</span>
-                      </div>
-                      <p className="text-xs font-semibold text-white truncate">{item.data.title || "Announcement"}</p>
-                      <p className="text-[10px] text-white/50 truncate mt-0.5">
-                        {item.type === "announcement" ? item.data.body : item.data.description || "View schedule details"}
-                      </p>
-                    </div>
-                    <span className="text-xs text-gold shrink-0 self-center">View Details &rarr;</span>
-                  </div>
-                );
-              })}
-              {feedItems.length === 0 && (
-                <p className="text-xs text-white/40 italic py-4">No recent team notifications.</p>
-              )}
-            </div>
           </div>
         </div>
 
