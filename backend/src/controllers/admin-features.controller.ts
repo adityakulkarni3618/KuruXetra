@@ -138,12 +138,18 @@ export async function listMeetings(req: AuthedRequest, res: Response) {
   res.json(meetings);
 }
 
+// ─── Session exercise name helper ───────────────────────────────────────────
+function getExerciseName(w: { workoutType: { name: string } | null; customName: string | null }) {
+  return w.customName || w.workoutType?.name || "Exercise";
+}
+
+// ─── Create session: accepts free-text exercise names ───────────────────────
 const createSessionSchema = z.object({
   sportId: z.string().min(1),
   title: z.string().min(2),
   startTime: z.string().refine((val) => !Number.isNaN(Date.parse(val)), "Invalid datetime"),
-  workouts: z.array(z.object({
-    workoutTypeId: z.string().min(1),
+  exercises: z.array(z.object({
+    name: z.string().min(1),   // free-text exercise name
     rounds: z.boolean(),
   })).min(1),
 });
@@ -152,7 +158,7 @@ export async function createSession(req: AuthedRequest, res: Response) {
   const parsed = createSessionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
-  const { sportId, title, startTime, workouts } = parsed.data;
+  const { sportId, title, startTime, exercises } = parsed.data;
 
   const sport = await prisma.sport.findUnique({ where: { id: sportId } });
   if (!sport) return res.status(404).json({ error: "Sport not found" });
@@ -167,9 +173,9 @@ export async function createSession(req: AuthedRequest, res: Response) {
       title,
       startTime: new Date(startTime),
       workouts: {
-        create: workouts.map((w) => ({
-          workoutTypeId: w.workoutTypeId,
-          rounds: w.rounds,
+        create: exercises.map((e) => ({
+          customName: e.name,
+          rounds: e.rounds,
         })),
       },
     },
@@ -179,6 +185,45 @@ export async function createSession(req: AuthedRequest, res: Response) {
   });
 
   res.status(201).json(session);
+}
+
+// ─── Add exercise to an already-active session (captain only) ─────────────
+const addExerciseSchema = z.object({
+  name: z.string().min(1),
+  rounds: z.boolean().optional(),
+});
+
+export async function addExerciseToSession(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+  const parsed = addExerciseSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
+  try {
+    const session = await prisma.session.findUnique({ where: { id }, include: { sport: true } });
+    if (!session) return res.status(404).json({ error: "Session not found" });
+
+    if (session.status === "ENDED") {
+      return res.status(400).json({ error: "Cannot add exercises to an ended session." });
+    }
+
+    if (req.user!.role === "CAPTAIN" && session.sport.captainId !== req.user!.id && session.sport.viceCaptainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only modify sessions for your own sport" });
+    }
+
+    const workout = await prisma.sessionWorkout.create({
+      data: {
+        sessionId: id,
+        customName: parsed.data.name,
+        rounds: parsed.data.rounds ?? false,
+      },
+      include: { workoutType: true },
+    });
+
+    res.status(201).json(workout);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to add exercise to session" });
+  }
 }
 
 export async function listSessions(req: AuthedRequest, res: Response) {
@@ -199,8 +244,9 @@ export async function listSessions(req: AuthedRequest, res: Response) {
   res.json(sessions);
 }
 
+// ─── Log a session exercise (athlete) — accepts free-text exercise name ─────
 const logSessionWorkoutSchema = z.object({
-  workoutTypeId: z.string().min(1),
+  sessionWorkoutId: z.string().min(1), // which exercise in the session
   completed: z.boolean(),
   value: z.number().optional(),
 });
@@ -210,12 +256,16 @@ export async function logSessionWorkout(req: AuthedRequest, res: Response) {
   const parsed = logSessionWorkoutSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
-  const session = await prisma.session.findUnique({ where: { id: sessionId }, include: { sport: true } });
+  const session = await prisma.session.findUnique({ where: { id: sessionId }, include: { sport: true, workouts: { include: { workoutType: true } } } });
   if (!session) return res.status(404).json({ error: "Session not found" });
 
   if (session.status === "ENDED") {
     return res.status(400).json({ error: "This training session has already ended. Submissions are closed." });
   }
+
+  // Find the specific session workout item
+  const sessionWorkout = session.workouts.find((w) => w.id === parsed.data.sessionWorkoutId);
+  if (!sessionWorkout) return res.status(404).json({ error: "Exercise not found in this session" });
 
   // Verify athlete is approved member of the sport
   const membership = await prisma.membership.findFirst({
@@ -225,12 +275,14 @@ export async function logSessionWorkout(req: AuthedRequest, res: Response) {
     return res.status(403).json({ error: "You are not an approved member of this sport" });
   }
 
-  // Find if log already exists
+  const exerciseName = sessionWorkout.customName || sessionWorkout.workoutType?.name || "Exercise";
+
+  // Find if log already exists for this session workout item
   const existingLog = await prisma.athleteSessionLog.findFirst({
     where: {
       sessionId,
       userId: req.user!.id,
-      workoutTypeId: parsed.data.workoutTypeId,
+      customExerciseName: exerciseName,
     },
   });
 
@@ -248,7 +300,8 @@ export async function logSessionWorkout(req: AuthedRequest, res: Response) {
       data: {
         sessionId,
         userId: req.user!.id,
-        workoutTypeId: parsed.data.workoutTypeId,
+        customExerciseName: exerciseName,
+        workoutTypeId: sessionWorkout.workoutTypeId ?? undefined,
         completed: parsed.data.completed,
         value: parsed.data.value,
       },
@@ -265,7 +318,6 @@ export async function deleteMeeting(req: AuthedRequest, res: Response) {
     const meeting = await prisma.teamMeeting.findUnique({ where: { id }, include: { sport: true } });
     if (!meeting) return res.status(404).json({ error: "Meeting not found" });
 
-    // Auth check: Admin or captain of the sport
     if (req.user!.role === "CAPTAIN" && meeting.sport.captainId !== req.user!.id && meeting.sport.viceCaptainId !== req.user!.id) {
       return res.status(403).json({ error: "You can only delete meetings for your own sport" });
     }
@@ -293,7 +345,6 @@ export async function deleteAnnouncement(req: AuthedRequest, res: Response) {
     const announcement = await prisma.announcement.findUnique({ where: { id }, include: { sport: true } });
     if (!announcement) return res.status(404).json({ error: "Announcement not found" });
 
-    // Auth check: Admin or author or captain of the sport
     if (req.user!.role === "CAPTAIN" && announcement.sport && announcement.sport.captainId !== req.user!.id && announcement.sport.viceCaptainId !== req.user!.id) {
       return res.status(403).json({ error: "You can only delete announcements for your own sport" });
     }
@@ -313,7 +364,6 @@ export async function deleteSession(req: AuthedRequest, res: Response) {
     const session = await prisma.session.findUnique({ where: { id }, include: { sport: true } });
     if (!session) return res.status(404).json({ error: "Session not found" });
 
-    // Auth check: Admin or captain of the sport
     if (req.user!.role === "CAPTAIN" && session.sport.captainId !== req.user!.id && session.sport.viceCaptainId !== req.user!.id) {
       return res.status(403).json({ error: "You can only delete sessions for your own sport" });
     }
@@ -338,7 +388,6 @@ export async function endSession(req: AuthedRequest, res: Response) {
     const session = await prisma.session.findUnique({ where: { id }, include: { sport: true } });
     if (!session) return res.status(404).json({ error: "Session not found" });
 
-    // Auth check: Admin or captain/vice-captain of the sport
     if (req.user!.role === "CAPTAIN" && session.sport.captainId !== req.user!.id && session.sport.viceCaptainId !== req.user!.id) {
       return res.status(403).json({ error: "You can only end sessions for your own sport" });
     }
@@ -383,30 +432,29 @@ export async function reviewSessionLogs(req: AuthedRequest, res: Response) {
 
       if (!log || log.sessionId !== sessionId) continue;
 
-      // Update log status
       await prisma.athleteSessionLog.update({
         where: { id: log.id },
         data: { status: item.status },
       });
 
       if (item.status === "APPROVED") {
-        // Award points if not already awarded
         const existingLedger = await prisma.pointsLedger.findFirst({
           where: { reason: "SESSION_WORKOUT", refId: log.id },
         });
 
         if (!existingLedger) {
+          // Award base points (10) for custom exercises, or workoutType points if available
+          const points = log.workoutType?.points ?? 10;
           await prisma.pointsLedger.create({
             data: {
               userId: log.userId,
-              points: log.workoutType.points,
+              points,
               reason: "SESSION_WORKOUT",
               refId: log.id,
             },
           });
         }
       } else {
-        // If rejected, remove points if previously awarded
         await prisma.pointsLedger.deleteMany({
           where: { reason: "SESSION_WORKOUT", refId: log.id },
         });
@@ -419,5 +467,3 @@ export async function reviewSessionLogs(req: AuthedRequest, res: Response) {
     res.status(500).json({ error: "Failed to review session logs" });
   }
 }
-
-

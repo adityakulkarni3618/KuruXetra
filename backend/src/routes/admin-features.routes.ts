@@ -13,6 +13,7 @@ import {
   createSession,
   listSessions,
   logSessionWorkout,
+  addExerciseToSession,
   deleteMeeting,
   deleteAnnouncement,
   deleteSession,
@@ -38,6 +39,7 @@ router.delete("/meetings/:id", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"
 router.get("/sessions", requireAuth, listSessions);
 router.post("/sessions", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), createSession);
 router.post("/sessions/:sessionId/logs", requireAuth, logSessionWorkout);
+router.post("/sessions/:id/add-exercise", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), addExerciseToSession);
 router.delete("/sessions/:id", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), deleteSession);
 router.post("/sessions/:id/end", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), endSession);
 router.post("/sessions/:sessionId/review-logs", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), reviewSessionLogs);

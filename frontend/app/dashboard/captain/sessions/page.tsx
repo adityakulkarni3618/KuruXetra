@@ -8,15 +8,20 @@ import { exportToCSV, printReport } from "@/lib/export";
 export default function CaptainSessionsPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
-  const [workoutTypes, setWorkoutTypes] = useState<any[]>([]);
   const [sessionForm, setSessionForm] = useState({
     title: "",
     startTime: "",
-    workouts: [] as { workoutTypeId: string; rounds: boolean }[],
+    exercises: [] as { name: string; rounds: boolean }[],
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Per-session "add exercise" state
+  const [addExerciseSessionId, setAddExerciseSessionId] = useState<string | null>(null);
+  const [addExerciseName, setAddExerciseName] = useState("");
+  const [addExerciseRounds, setAddExerciseRounds] = useState(false);
+  const [addExerciseLoading, setAddExerciseLoading] = useState(false);
 
   async function load() {
     setError("");
@@ -26,12 +31,8 @@ export default function CaptainSessionsPage() {
       const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
       setMySport(sport);
       if (sport) {
-        const [sess, types] = await Promise.all([
-          api(`/api/admin-features/sessions?sportId=${sport.id}`),
-          api("/api/admin-features/workout-types"),
-        ]);
+        const sess = await api(`/api/admin-features/sessions?sportId=${sport.id}`);
         setSessions(sess);
-        setWorkoutTypes(types.filter((t: any) => t.isActive));
       }
     } catch (err: any) {
       setError(err.message);
@@ -44,32 +45,38 @@ export default function CaptainSessionsPage() {
     load();
   }, []);
 
-  const addWorkoutToForm = () => {
+  // ── Form exercise helpers ──────────────────────────────────────────────────
+  const addExerciseToForm = () => {
     setSessionForm((prev) => ({
       ...prev,
-      workouts: [...prev.workouts, { workoutTypeId: "", rounds: false }],
+      exercises: [...prev.exercises, { name: "", rounds: false }],
     }));
   };
 
-  const removeWorkoutFromForm = (index: number) => {
+  const removeExerciseFromForm = (index: number) => {
     setSessionForm((prev) => ({
       ...prev,
-      workouts: prev.workouts.filter((_, i) => i !== index),
+      exercises: prev.exercises.filter((_, i) => i !== index),
     }));
   };
 
-  const updateWorkoutInForm = (index: number, field: string, val: any) => {
+  const updateExerciseInForm = (index: number, field: string, val: any) => {
     setSessionForm((prev) => {
-      const copy = [...prev.workouts];
+      const copy = [...prev.exercises];
       copy[index] = { ...copy[index], [field]: val };
-      return { ...prev, workouts: copy };
+      return { ...prev, exercises: copy };
     });
   };
 
+  // ── Create session ─────────────────────────────────────────────────────────
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sessionForm.workouts.length === 0) {
-      setError("Please add at least one workout to the session.");
+    if (sessionForm.exercises.length === 0) {
+      setError("Please add at least one exercise to the session.");
+      return;
+    }
+    if (sessionForm.exercises.some((ex) => !ex.name.trim())) {
+      setError("All exercise names must be filled in.");
       return;
     }
     setError("");
@@ -81,14 +88,37 @@ export default function CaptainSessionsPage() {
           sportId: mySport.id,
           title: sessionForm.title,
           startTime: sessionForm.startTime,
-          workouts: sessionForm.workouts,
+          exercises: sessionForm.exercises.map((e) => ({ name: e.name.trim(), rounds: e.rounds })),
         }),
       });
-      setSessionForm({ title: "", startTime: "", workouts: [] });
+      setSessionForm({ title: "", startTime: "", exercises: [] });
       setMessage("Training session created successfully.");
       await load();
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  // ── Add exercise to active session ─────────────────────────────────────────
+  const handleAddExerciseToSession = async (sessionId: string) => {
+    if (!addExerciseName.trim()) return;
+    setAddExerciseLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin-features/sessions/${sessionId}/add-exercise`, {
+        method: "POST",
+        body: JSON.stringify({ name: addExerciseName.trim(), rounds: addExerciseRounds }),
+      });
+      setAddExerciseName("");
+      setAddExerciseRounds(false);
+      setAddExerciseSessionId(null);
+      setMessage("Exercise added to session.");
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setAddExerciseLoading(false);
     }
   };
 
@@ -111,7 +141,7 @@ export default function CaptainSessionsPage() {
     setMessage("");
     try {
       await api(`/api/admin-features/sessions/${id}/end`, { method: "POST" });
-      setMessage("Session ended successfully.");
+      setMessage("Session ended. Athletes can no longer submit logs.");
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -128,7 +158,7 @@ export default function CaptainSessionsPage() {
           reviews: [{ logId, status }]
         }),
       });
-      setMessage(`Log updated to ${status.toLowerCase()}.`);
+      setMessage(`Log ${status.toLowerCase()}.`);
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -141,7 +171,7 @@ export default function CaptainSessionsPage() {
         "Session Title": sess.title,
         "Start Time": new Date(sess.startTime).toLocaleString(),
         "Athlete Name": log.user.fullName,
-        "Workout Name": log.workoutType.name,
+        "Exercise": log.customExerciseName || log.workoutType?.name || "—",
         "Rounds / Status": log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
       }))
     );
@@ -149,13 +179,13 @@ export default function CaptainSessionsPage() {
   }
 
   function handleExportPDF() {
-    const headers = ["Session Title", "Start Time", "Athlete Name", "Workout", "Rounds/Status"];
+    const headers = ["Session Title", "Start Time", "Athlete Name", "Exercise", "Rounds/Status"];
     const rows = sessions.flatMap((sess) =>
       sess.athleteLogs.map((log: any) => [
         sess.title,
         new Date(sess.startTime).toLocaleString(),
         log.user.fullName,
-        log.workoutType.name,
+        log.customExerciseName || log.workoutType?.name || "—",
         log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
       ])
     );
@@ -170,7 +200,7 @@ export default function CaptainSessionsPage() {
     <div>
       <div className="mb-6">
         <Link href="/dashboard/captain" className="btn-back">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Back to Dashboard
         </Link>
       </div>
@@ -190,9 +220,9 @@ export default function CaptainSessionsPage() {
       {message && <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Create Form */}
+        {/* ── Create Session Form ── */}
         <div className="stat-card">
-          <h2 className="font-display font-semibold mb-3 text-white">Create Training Session</h2>
+          <h2 className="font-display font-semibold mb-4 text-white">Create Training Session</h2>
           <form onSubmit={handleCreateSession} className="space-y-4">
             <label className="block">
               <span className="label">Session Title</span>
@@ -217,63 +247,66 @@ export default function CaptainSessionsPage() {
 
             <div className="border-t border-white/5 pt-4">
               <div className="flex justify-between items-center mb-3">
-                <span className="label text-white/80">Workout Items</span>
+                <span className="label text-white/80">Exercises</span>
                 <button
                   type="button"
-                  onClick={addWorkoutToForm}
-                  className="text-xs text-gold border border-gold/20 bg-gold/10 px-2.5 py-1 rounded"
+                  onClick={addExerciseToForm}
+                  className="text-xs text-gold border border-gold/20 bg-gold/10 hover:bg-gold/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                 >
-                  + Add Workout
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+                  Add Exercise
                 </button>
               </div>
 
-              {sessionForm.workouts.map((w, index) => (
-                <div key={index} className="flex gap-3 items-end bg-surface p-3 rounded-lg border border-white/5 mb-2">
-                  <label className="block flex-1">
-                    <span className="label text-xs">Workout Type</span>
-                    <select
-                      className="input-field text-xs"
-                      value={w.workoutTypeId}
-                      onChange={(e) => updateWorkoutInForm(index, "workoutTypeId", e.target.value)}
-                      required
-                    >
-                      <option value="">Choose workout type</option>
-                      {workoutTypes.map((type) => (
-                        <option key={type.id} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex items-center gap-2 pb-3.5">
+              {sessionForm.exercises.length === 0 && (
+                <p className="text-xs text-white/30 text-center py-3 border border-dashed border-white/10 rounded-lg">
+                  Click "Add Exercise" to add exercises to this session
+                </p>
+              )}
+
+              {sessionForm.exercises.map((ex, index) => (
+                <div key={index} className="flex gap-3 items-start bg-surface p-3 rounded-lg border border-white/5 mb-2">
+                  <div className="flex-1 space-y-2">
                     <input
-                      type="checkbox"
-                      checked={w.rounds}
-                      onChange={(e) => updateWorkoutInForm(index, "rounds", e.target.checked)}
-                      className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
+                      className="input-field text-xs"
+                      placeholder="Exercise name (e.g. Push-ups, Sprints, Squats)"
+                      value={ex.name}
+                      onChange={(e) => updateExerciseInForm(index, "name", e.target.value)}
+                      required
                     />
-                    <span className="text-xs text-white/60">Rounds</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={ex.rounds}
+                        onChange={(e) => updateExerciseInForm(index, "rounds", e.target.checked)}
+                        className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
+                      />
+                      <span className="text-xs text-white/60">Track rounds</span>
+                    </label>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => removeWorkoutFromForm(index)}
-                    className="text-xs text-red-400 hover:text-red-300 pb-3"
+                    onClick={() => removeExerciseFromForm(index)}
+                    className="text-xs text-red-400 hover:text-red-300 mt-1 p-1"
                   >
-                    Remove
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 </div>
               ))}
             </div>
+
             <button type="submit" className="btn-gold w-full">Create Training Session</button>
           </form>
         </div>
 
-        {/* Sessions Logs List */}
+        {/* ── Sessions Log ── */}
         <div className="space-y-4">
           <h2 className="font-display font-semibold text-white">Training Sessions Log ({sessions.length})</h2>
           {sessions.map((sess) => (
-            <div key={sess.id} className="stat-card border border-white/5 hover:border-gold/20 transition-all">
+            <div key={sess.id} className="stat-card border border-white/5 hover:border-gold/10 transition-all">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-display font-semibold text-white">{sess.title}</h3>
                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                       sess.status === "ACTIVE" ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/40"
@@ -281,9 +314,11 @@ export default function CaptainSessionsPage() {
                       {sess.status}
                     </span>
                   </div>
-                  <p className="text-xs text-white/40 mt-0.5">Scheduled for {new Date(sess.startTime).toLocaleString()}</p>
+                  <p className="text-xs text-white/40 mt-0.5">
+                    {new Date(sess.startTime).toLocaleString()}
+                  </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   {sess.status === "ACTIVE" && (
                     <button
                       onClick={() => handleEndSession(sess.id)}
@@ -302,27 +337,90 @@ export default function CaptainSessionsPage() {
                   </button>
                 </div>
               </div>
-              
+
+              {/* Exercises List */}
               <div className="mt-4 border-t border-white/5 pt-3">
-                <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Workout Items</p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-white/70">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-white/40 font-semibold uppercase">Exercises ({sess.workouts.length})</p>
+                  {sess.status === "ACTIVE" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddExerciseSessionId(addExerciseSessionId === sess.id ? null : sess.id);
+                        setAddExerciseName("");
+                        setAddExerciseRounds(false);
+                      }}
+                      className="text-[10px] text-gold border border-gold/20 bg-gold/10 hover:bg-gold/20 px-2.5 py-1 rounded transition-colors flex items-center gap-1"
+                    >
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+                      Add Exercise
+                    </button>
+                  )}
+                </div>
+
+                <ul className="space-y-1.5 mb-3">
                   {sess.workouts.map((w: any) => (
-                    <li key={w.id}>
-                      {w.workoutType.name} {w.rounds ? "(Rounds tracked)" : ""}
+                    <li key={w.id} className="flex items-center gap-2 text-sm text-white/70">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold/60 shrink-0" />
+                      {w.customName || w.workoutType?.name}
+                      {w.rounds && <span className="text-[10px] text-white/30 ml-1">(rounds tracked)</span>}
                     </li>
                   ))}
+                  {sess.workouts.length === 0 && (
+                    <li className="text-xs text-white/30">No exercises yet.</li>
+                  )}
                 </ul>
+
+                {/* Inline add-exercise form (only for active session) */}
+                {addExerciseSessionId === sess.id && (
+                  <div className="bg-surface/60 border border-white/10 rounded-lg p-3 mb-3 space-y-2">
+                    <input
+                      className="input-field text-xs"
+                      placeholder="Exercise name (e.g. Sprints, Plank, Dribbling)"
+                      value={addExerciseName}
+                      onChange={(e) => setAddExerciseName(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={addExerciseRounds}
+                          onChange={(e) => setAddExerciseRounds(e.target.checked)}
+                          className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
+                        />
+                        <span className="text-xs text-white/60">Track rounds</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setAddExerciseSessionId(null)}
+                          className="text-xs text-white/40 hover:text-white/70 px-2 py-1"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleAddExerciseToSession(sess.id)}
+                          disabled={addExerciseLoading || !addExerciseName.trim()}
+                          className="btn-gold text-xs px-3 py-1.5"
+                        >
+                          {addExerciseLoading ? "Adding..." : "Add"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Athlete Submissions */}
               {sess.athleteLogs?.length > 0 && (
-                <div className="mt-4 border-t border-white/5 pt-3">
+                <div className="border-t border-white/5 pt-3">
                   <p className="text-xs text-white/40 font-semibold mb-2 uppercase">Athlete Submissions</p>
                   <div className="space-y-2 text-xs text-white/70">
                     {sess.athleteLogs.map((log: any) => (
                       <div key={log.id} className="flex items-center justify-between border-b border-white/5 py-1.5 flex-wrap gap-2">
                         <div>
                           <span className="font-medium text-white">{log.user.fullName}</span>
-                          <span className="text-white/40 ml-1">({log.workoutType.name})</span>
+                          <span className="text-white/40 ml-1">({log.customExerciseName || log.workoutType?.name})</span>
                           <span className="text-gold ml-2">
                             {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
                           </span>
