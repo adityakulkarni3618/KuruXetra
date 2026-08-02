@@ -235,10 +235,36 @@ export async function listActiveStatuses(req: AuthedRequest, res: Response) {
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, fullName: true, uniqueId: true, profilePhotoUrl: true } },
+        views: {
+          include: {
+            viewer: { select: { id: true, fullName: true, uniqueId: true } }
+          }
+        }
       },
     });
     res.json(statuses);
   } catch (err: any) {
     res.status(500).json({ error: "Failed to list status updates" });
+  }
+}
+
+// Log status view record
+export async function viewStatus(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // statusUpdateId
+  const viewerId = req.user!.id;
+  try {
+    const view = await prisma.statusView.upsert({
+      where: {
+        statusUpdateId_viewerId: { statusUpdateId: id, viewerId }
+      },
+      update: {},
+      create: {
+        statusUpdateId: id,
+        viewerId
+      }
+    });
+    res.json(view);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to record view status" });
   }
 }

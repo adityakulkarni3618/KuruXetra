@@ -64,6 +64,7 @@ model User {
   postComments      PostComment[]
   statusUpdates     StatusUpdate[]
   badges            UserBadge[]
+  statusViews       StatusView[]
   athleteSessionLogs AthleteSessionLog[]
 }
 
@@ -353,4 +354,16 @@ model StatusUpdate {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views     StatusView[]
+}
+
+model StatusView {
+  id             String       @id @default(cuid())
+  statusUpdateId String
+  viewerId       String
+  viewedAt       DateTime     @default(now())
+  statusUpdate   StatusUpdate @relation(fields: [statusUpdateId], references: [id], onDelete: Cascade)
+  viewer         User         @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([statusUpdateId, viewerId])
 }
