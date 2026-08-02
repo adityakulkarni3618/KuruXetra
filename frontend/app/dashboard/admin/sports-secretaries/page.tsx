@@ -92,9 +92,8 @@ export default function SportSecretariesPage() {
     setError("");
     setMessage("");
     try {
-      await api(`/api/admin/users/${userId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: "STUDENT_ATHLETE" }),
+      await api(`/api/admin/users/${userId}/demote-from-ss`, {
+        method: "POST"
       });
       setMessage(`${userName} has been removed from Sports Secretary role.`);
       setSelectedUser(null);
