@@ -497,14 +497,23 @@ export default function LeaderboardPage() {
                             </div>
                           )}
                           <div>
-                            <p className="text-xs font-semibold text-white">{post.user.fullName}</p>
+                    <p className="text-xs font-semibold text-white">{post.user.fullName}</p>
                             <p className="text-[9px] text-white/40">{new Date(post.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
 
                         <p className="text-xs text-white/70 whitespace-pre-wrap">{post.content}</p>
                         {post.imageUrl && (
-                          <img src={post.imageUrl} className="w-full max-h-48 object-cover rounded-lg border border-white/5" />
+                          post.imageUrl.match(/\.(mp4|webm|ogg|mov|m4v)($|\?)/i) || post.imageUrl.includes("/video/upload/") ? (
+                            <video 
+                              src={post.imageUrl} 
+                              controls 
+                              playsInline
+                              className="w-full max-h-60 rounded-lg object-contain bg-black border border-white/5" 
+                            />
+                          ) : (
+                            <img src={post.imageUrl} className="w-full max-h-60 rounded-lg object-contain bg-black border border-white/5" />
+                          )
                         )}
 
                         {/* Interactive Bar */}
