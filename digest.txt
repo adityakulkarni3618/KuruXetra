@@ -1,15 +1,16 @@
 # KURUXETRA SPORTS MANAGEMENT SYSTEM (KSMS) - PROJECT DIGEST
 ===========================================================
 
-## Current status
+## Current Status
 - Authentication transitioned fully to Athletic ID (`uniqueId`) with password confirmation; `username` concept dropped.
 - Completed feature additions for admin/captain workflows, workout logging, running logging, profile editing, and multiple sports secretaries.
 - New profile page added to dashboard and backend profile picture/college ID update endpoints implemented.
 - Admin `/api/admin/users/search` and `/api/admin/users/:id/promote-to-ss` are active and support multiple super admins.
 - Seed data defaults to Admin ID `KX000001` and password `SSSS@123`.
 - Backend and frontend builds both pass.
+
 ## Project Stack
-- **Backend**: Node.js, Express, TypeScript, PostgreSQL, Prisma, JWT authentication.
+- **Backend**: Node.js, Express, TypeScript, PostgreSQL (Neon DB Cloud), Prisma, JWT authentication.
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS, Recharts.
 
 ---
@@ -25,7 +26,7 @@
 - `/frontend`
   - `app/`: Next.js App Router with root, login, register, dashboard, and nested dashboard pages.
   - `app/dashboard/`: Protected dashboard area with admin, attendance, captain, leaderboard, running, sports, and workouts views.
-  - `components/`: currently empty.
+  - `components/`: Shared UI components.
   - `lib/`: Shared frontend helpers including `api.ts` and `auth-context.tsx`.
   - `package.json`: Frontend scripts (`dev`, `build`, `start`, `lint`).
 
@@ -79,28 +80,18 @@
 
 ---
 
-## Key Terminal Commands
+## Security Practices & Architecture
+1. **Secret & Key Isolation**: Sensitive parameters (`DATABASE_URL`, `JWT_SECRET`, and Cloudinary upload credentials) are completely externalized from the source code and loaded dynamically through environment variables (`.env`).
+2. **Data Sanitization**: Direct ORM queries using Prisma prevent SQL injection attacks. Inputs are strictly validated on REST API entry points using schemas.
+3. **Role-Based Access Control (RBAC)**: All administrative, captain review, and user management routes are protected by backend route guards validation logic.
+4. **Password Security**: Passwords are securely hashed with bcrypt (10 rounds salting strength) before storage. Unencrypted credentials are never logged or exposed.
+5. **Session Management**: Session tokens are encrypted using JSON Web Tokens (JWT) with configured expiration periods.
 
-### Database Startup (Docker)
-```bash
-docker run --name ksms-db -e POSTGRES_USER=ksms_user -e POSTGRES_PASSWORD=ksms_pass -e POSTGRES_DB=ksms -p 5432:5432 -d postgres:16
-```
+---
 
-### Backend Setup & Running
-```bash
-cd backend
-npm install
-cp .env.example .env     # then update DATABASE_URL, JWT_SECRET, CORS_ORIGIN as needed
-npx prisma generate
-npx prisma migrate dev --name init
-npx prisma db seed
-npm run dev              # starts backend on http://localhost:4000
-```
-
-### Frontend Setup & Running
-```bash
-cd frontend
-npm install
-echo "NEXT_PUBLIC_API_URL=http://localhost:4000" > .env.local
-npm run dev              # starts frontend on http://localhost:3000
-```
+## Public Repository Guidelines
+> [!IMPORTANT]
+> Maintaining the GitHub repository as public is **completely safe** provided that these rules are strictly enforced:
+> - **Environment Variables (.env)**: Never commit the `.env` file or raw passwords (e.g. Neon connection strings) to GitHub. Keep `.env` in the `.gitignore` list.
+> - **Build/Key Secrets**: Manage API passwords, Cloudinary credentials, and JWT hashes exclusively through Vercel and Render Environment Variables settings pages.
+> - **Default Admin Credentials**: Change the seeded default admin password (`SSSS@123`) inside the production database immediately.

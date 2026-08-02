@@ -2,11 +2,11 @@
 
 A sports management and attendance system with training logs, leaderboards, role-based access, and season-aware tracking.
 
-## Stack
-- **Backend**: Node.js, Express, TypeScript, PostgreSQL, Prisma, JWT auth
+## Project Stack
+- **Backend**: Node.js, Express, TypeScript, PostgreSQL (Neon DB Cloud), Prisma, JWT auth
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS, Recharts
 
-## Project structure
+## Project Structure
 - `/backend`
   - `src/index.ts`: Express server entrypoint, API routing, health check, CORS, JSON parsing.
   - `src/routes/`: Auth, sports, attendance, workouts, running, leaderboard, users, admin.
@@ -19,7 +19,7 @@ A sports management and attendance system with training logs, leaderboards, role
   - `lib/`: Client helpers and auth context.
   - `package.json`: Scripts for dev, build, start, lint.
 
-## Core features
+## Core Features
 - Registration, approval workflow, and login (via Athletic ID)
 - Role-based access: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER` (supports multiple Super Admins)
 - Sport management with join requests and captain assignment
@@ -28,43 +28,21 @@ A sports management and attendance system with training logs, leaderboards, role
 - Leaderboard and points ledger tracking user activity
 - Season-aware data model ready for future season selection and reporting
 
-## Backend API routes
-- `POST /api/auth/*`
-- `GET/POST /api/sports/*`
-- `GET/POST /api/attendance/*`
-- `GET/POST /api/workouts/*`
-- `GET/POST /api/running/*`
-- `GET /api/leaderboard/*`
-- `GET/POST /api/users/*`
-- `GET/POST /api/admin/*`
+## Security Practices & Architecture
+1. **Secret & Key Isolation**: Sensitive parameters (`DATABASE_URL`, `JWT_SECRET`, and Cloudinary upload credentials) are completely externalized from the source code and loaded dynamically through environment variables (`.env`).
+2. **Data Sanitization**: Direct ORM queries using Prisma prevent SQL injection attacks. Inputs are strictly validated on REST API entry points using schemas.
+3. **Role-Based Access Control (RBAC)**: All administrative, captain review, and user management routes are protected by backend route guards validation logic.
+4. **Password Security**: Passwords are securely hashed with bcrypt (10 rounds salting strength) before storage. Unencrypted credentials are never logged or exposed.
+5. **Session Management**: Session tokens are encrypted using JSON Web Tokens (JWT) with configured expiration periods.
 
-## Frontend routes
-- `/`: Landing page
-- `/login`: Login page
-- `/register`: Registration page
-- `/dashboard`: Dashboard home
-- `/dashboard/admin`: Admin dashboard (with full roster search & sub-admin promotion)
-- `/dashboard/attendance`: Attendance view
-- `/dashboard/captain`: Captain area
-- `/dashboard/leaderboard`: Leaderboard
-- `/dashboard/running`: Running log view
-- `/dashboard/sports`: Sports management view
-- `/dashboard/workouts`: Workout log view
+## Public Repository Safety Guidelines
+> [!IMPORTANT]
+> Maintaining the GitHub repository as public is **completely safe** provided that these rules are strictly enforced:
+> - **Environment Variables (.env)**: Never commit the `.env` file or raw passwords (e.g. Neon connection strings) to GitHub. Keep `.env` in the `.gitignore` list.
+> - **Build/Key Secrets**: Manage API passwords, Cloudinary credentials, and JWT hashes exclusively through Vercel and Render Environment Variables settings pages.
+> - **Default Admin Credentials**: Change the seeded default admin password (`SSSS@123`) inside the production database immediately.
 
-## Prisma schema summary
-- `Role`: `SUPER_ADMIN`, `CAPTAIN`, `STUDENT_ATHLETE`, `FITNESS_MEMBER`
-- `UserStatus`: `PENDING_APPROVAL`, `ACTIVE`, `SUSPENDED`
-- `MembershipStatus`: `PENDING`, `APPROVED`, `REJECTED`, `REMOVED`
-- `Season`: Used for time-bound competition periods and optional season-linked activity data
-- `User`: Stores identity (`uniqueId`), academic details, contact, role/status, and related activity
-- `Sport`: Sport metadata, captain relation, capacity, and status
-- `Membership`: Links users to sports with approval status
-- `Attendance`: Check-in/out logs, sport, season, and marked-by data
-- `Workout`: Exercise entries with sets, reps, weight, duration, and calories
-- `RunningLog`: Distance, duration, pace, speed, calories, notes
-- `PointsLedger`: Append-only points history for leaderboard calculations
-
-## Running locally
+## Running Locally
 
 ### Backend
 ```bash
@@ -95,18 +73,6 @@ The frontend starts on `http://localhost:3000`.
 docker run --name ksms-db -e POSTGRES_USER=ksms_user -e POSTGRES_PASSWORD=ksms_pass -e POSTGRES_DB=ksms -p 5432:5432 -d postgres:16
 ```
 
-## Seeded demo data
+## Seeded Demo Data
 - Super Admin: `KX000001` / `SSSS@123`
 - Demo sports: Kho-Kho, Kabaddi, Cricket, Football, Volleyball, Badminton, Table Tennis
-
-## Notes
-- `backend` uses `tsx watch` for local TypeScript execution.
-- CORS defaults to `http://localhost:3000` if `CORS_ORIGIN` is unset.
-- `Season` exists in the schema, but the UI does not yet expose season switching.
-
-## Next improvements
-1. Add user search for captain assignment instead of internal IDs
-2. Expose active season selection in the UI
-3. Add profile/photo uploads and documents
-4. Add badges, challenges, events/matches, announcements
-5. Add Docker Compose for full local stack startup
