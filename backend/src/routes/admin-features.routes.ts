@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 import {
@@ -23,6 +24,15 @@ import {
 } from "../controllers/admin-features.controller";
 
 const router = Router();
+
+router.get("/badges", requireAuth, async (req, res) => {
+  try {
+    const badges = await prisma.badge.findMany({ orderBy: { name: "asc" } });
+    res.json(badges);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to list badges" });
+  }
+});
 
 router.get("/workout-types", requireAuth, listWorkoutTypes);
 router.post("/workout-types", requireAuth, requireRole("SUPER_ADMIN"), createWorkoutType);

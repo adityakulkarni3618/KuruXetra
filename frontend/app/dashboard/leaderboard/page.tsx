@@ -75,9 +75,21 @@ export default function LeaderboardPage() {
   const [statusCaption, setStatusCaption] = useState("");
   const [postingStatus, setPostingStatus] = useState(false);
 
+  // Tabs: "leaderboard" | "explore-badges"
+  const [activeTab, setActiveTab] = useState<"leaderboard" | "explore-badges">("leaderboard");
+  const [badgesList, setBadgesList] = useState<any[]>([]);
+
   useEffect(() => {
     api("/api/sports").then(setSports).catch(() => {});
+    api("/api/admin-features/badges").then(setBadgesList).catch(() => {});
     loadStatuses();
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "explore-badges") {
+        setActiveTab("explore-badges");
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -272,62 +284,107 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* ── Main Leaderboard List ── */}
-        <div className="md:col-span-2 space-y-4">
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-bold mb-1">Leaderboard</h1>
-              <p className="text-white/50 text-sm">Ranked by total points across activities.</p>
-            </div>
-            <select className="input-field max-w-xs" value={sportId} onChange={(e) => setSportId(e.target.value)}>
-              <option value="">Global</option>
-              {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+      {/* Tab Switcher Headers */}
+      <div className="flex gap-4 border-b border-white/5 pb-3 mb-6">
+        <button
+          onClick={() => setActiveTab("leaderboard")}
+          className={`font-display text-lg font-bold pb-1 transition-all ${
+            activeTab === "leaderboard" ? "text-gold border-b-2 border-gold" : "text-white/40 hover:text-white/80"
+          }`}
+        >
+          Leaderboard
+        </button>
+        <button
+          onClick={() => setActiveTab("explore-badges")}
+          className={`font-display text-lg font-bold pb-1 transition-all ${
+            activeTab === "explore-badges" ? "text-gold border-b-2 border-gold" : "text-white/40 hover:text-white/80"
+          }`}
+        >
+          Explore Badges
+        </button>
+      </div>
 
-          <div className="stat-card p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-surface text-white/40 text-xs uppercase">
-                <tr>
-                  <th className="text-left px-4 py-3">Rank</th>
-                  <th className="text-left px-4 py-3">Athlete</th>
-                  <th className="text-left px-4 py-3">Department</th>
-                  <th className="text-right px-4 py-3">Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {board.map((row) => (
-                  <tr
-                    key={row.id}
-                    onClick={() => fetchUserProfile(row.id)}
-                    className={`border-t border-border hover:bg-white/5 cursor-pointer transition-colors ${
-                      row.id === user?.id ? "bg-blue/10" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      {row.rank <= 3 ? <span className="text-gold font-bold">#{row.rank}</span> : `#${row.rank}`}
-                    </td>
-                    <td className="px-4 py-3 flex items-center gap-3">
-                      {row.profilePhotoUrl ? (
-                        <img src={row.profilePhotoUrl} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-surface-light flex items-center justify-center text-[10px] shrink-0">
-                          {row.fullName.charAt(0)}
-                        </div>
-                      )}
-                      <span>{row.fullName} <span className="text-white/30 text-xs">({row.uniqueId})</span></span>
-                    </td>
-                    <td className="px-4 py-3 text-white/50">{row.department}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{row.points}</td>
-                  </tr>
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* ── Main content pane (Leaderboard or Badges List) ── */}
+        <div className="md:col-span-2 space-y-4">
+          {activeTab === "leaderboard" ? (
+            <>
+              <div className="flex justify-between items-center flex-wrap gap-4">
+                <div>
+                  <h1 className="font-display text-2xl font-bold mb-1">Leaderboard</h1>
+                  <p className="text-white/50 text-sm">Ranked by total points across activities.</p>
+                </div>
+                <select className="input-field max-w-xs" value={sportId} onChange={(e) => setSportId(e.target.value)}>
+                  <option value="">Global</option>
+                  {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              <div className="stat-card p-0 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-surface text-white/40 text-xs uppercase">
+                    <tr>
+                      <th className="text-left px-4 py-3">Rank</th>
+                      <th className="text-left px-4 py-3">Athlete</th>
+                      <th className="text-left px-4 py-3">Department</th>
+                      <th className="text-right px-4 py-3">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {board.map((row) => (
+                      <tr
+                        key={row.id}
+                        onClick={() => fetchUserProfile(row.id)}
+                        className={`border-t border-border hover:bg-white/5 cursor-pointer transition-colors ${
+                          row.id === user?.id ? "bg-blue/10" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          {row.rank <= 3 ? <span className="text-gold font-bold">#{row.rank}</span> : `#${row.rank}`}
+                        </td>
+                        <td className="px-4 py-3 flex items-center gap-3">
+                          {row.profilePhotoUrl ? (
+                            <img src={row.profilePhotoUrl} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-surface-light flex items-center justify-center text-[10px] shrink-0">
+                              {row.fullName.charAt(0)}
+                            </div>
+                          )}
+                          <span>{row.fullName} <span className="text-white/30 text-xs">({row.uniqueId})</span></span>
+                        </td>
+                        <td className="px-4 py-3 text-white/50">{row.department}</td>
+                        <td className="px-4 py-3 text-right font-semibold">{row.points}</td>
+                      </tr>
+                    ))}
+                    {board.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-6 text-center text-white/40">No points logged yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="font-display text-2xl font-bold mb-1">Explore Badges</h1>
+                <p className="text-white/50 text-sm mb-4">Learn about all earnable achievements at Kuruxetra.</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {badgesList.map((badge) => (
+                  <div key={badge.id} className="stat-card border border-gold/10 hover:border-gold/30 transition-all flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-gold text-base">🏆 {badge.name}</p>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-surface border border-white/5 text-white/50">
+                        {badge.isManual ? "Captain/Sec Award" : "Auto Earn"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/70 leading-relaxed">{badge.description}</p>
+                  </div>
                 ))}
-                {board.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-6 text-center text-white/40">No points logged yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── Social Search Sidebar ── */}
