@@ -6,8 +6,36 @@ import { AuthedRequest } from "../middleware/auth";
 export async function listSports(req: AuthedRequest, res: Response) {
   const sports = await prisma.sport.findMany({
     include: {
-      captain: { select: { id: true, fullName: true, uniqueId: true } },
-      viceCaptain: { select: { id: true, fullName: true, uniqueId: true } },
+      captain: {
+        select: {
+          id: true,
+          fullName: true,
+          uniqueId: true,
+          email: true,
+          mobileNumber: true,
+          rollNumber: true,
+          department: true,
+          academicYear: true,
+          profilePhotoUrl: true,
+          fitnessGoal: true,
+          createdAt: true
+        }
+      },
+      viceCaptain: {
+        select: {
+          id: true,
+          fullName: true,
+          uniqueId: true,
+          email: true,
+          mobileNumber: true,
+          rollNumber: true,
+          department: true,
+          academicYear: true,
+          profilePhotoUrl: true,
+          fitnessGoal: true,
+          createdAt: true
+        }
+      },
       _count: { select: { memberships: true } },
     },
     orderBy: { name: "asc" },

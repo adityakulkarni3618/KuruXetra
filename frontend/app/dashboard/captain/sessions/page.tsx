@@ -84,7 +84,7 @@ export default function CaptainSessionsPage() {
         body: JSON.stringify({
           sportId: mySport.id,
           title: sessionForm.title,
-          startTime: sessionForm.startTime,
+          startTime: new Date(sessionForm.startTime).toISOString(),
           exercises: sessionForm.exercises.map((e) => ({ name: e.name.trim(), rounds: false })),
         }),
       });
