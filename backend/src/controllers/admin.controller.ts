@@ -64,6 +64,16 @@ export async function searchUsers(req: AuthedRequest, res: Response) {
         fitnessGoal: true,
         createdAt: true,
         updatedAt: true,
+        captainOf: {
+          select: {
+            name: true
+          }
+        },
+        viceCaptainOf: {
+          select: {
+            name: true
+          }
+        },
         posts: {
           select: {
             id: true,

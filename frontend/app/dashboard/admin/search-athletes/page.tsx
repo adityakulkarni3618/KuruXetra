@@ -125,8 +125,18 @@ export default function AdminSearchAthletesPage() {
               }
             }
             const { printReport } = require("@/lib/export");
-            const headers = ["Athletic ID", "Full Name", "Roll Number", "Department", "Academic Year", "Roster Status", "Athlete Posts List"];
+            const headers = ["Athletic ID", "Full Name", "Roll Number", "Department", "Academic Year", "Email", "Athlete Post / Role", "Athlete Posts List"];
             const rows = list.map((u: any) => {
+              // Construct current athlete post/role label (SS, Captain, Vice Captain, Athlete)
+              let athletePost = "Student Athlete";
+              if (u.role === "SUPER_ADMIN") {
+                athletePost = "Sports Secretary (Admin)";
+              } else if (u.captainOf && u.captainOf.length > 0) {
+                athletePost = `Captain of ${u.captainOf.map((s: any) => s.name).join(", ")}`;
+              } else if (u.viceCaptainOf && u.viceCaptainOf.length > 0) {
+                athletePost = `Vice-Captain of ${u.viceCaptainOf.map((s: any) => s.name).join(", ")}`;
+              }
+
               const postsStr = u.posts && u.posts.length > 0
                 ? u.posts.map((p: any, idx: number) => `${idx + 1}. "${p.content}" (${new Date(p.createdAt).toLocaleDateString()})`).join("<br/>")
                 : "No posts logged";
@@ -136,11 +146,12 @@ export default function AdminSearchAthletesPage() {
                 u.rollNumber,
                 u.department,
                 u.academicYear,
-                u.status,
+                u.email || "N/A",
+                athletePost,
                 postsStr
               ];
             });
-            printReport("Kuruxetra Athletes & Social Posts Report", headers, rows);
+            printReport("Kuruxetra Athletes Directory & Role Details Report", headers, rows);
           }}
           className="btn-gold text-xs px-4 py-2.5 shrink-0 self-start sm:self-center"
         >
