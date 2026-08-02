@@ -258,7 +258,7 @@ export default function ProfilePage() {
         {/* WhatsApp Status Card */}
         <div className="stat-card flex flex-col justify-between hover:border-gold/20 transition-all">
           <div>
-            <h3 className="font-semibold text-white mb-2">WhatsApp Status Update</h3>
+            <h3 className="font-semibold text-white mb-2">Add Status Update</h3>
             <p className="text-xs text-white/50 mb-3">Upload temporary photo/video statuses visible on the Leaderboard tab.</p>
           </div>
           <form onSubmit={handlePostStatus} className="space-y-2">
