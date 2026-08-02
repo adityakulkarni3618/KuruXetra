@@ -306,7 +306,12 @@ export default function LeaderboardPage() {
       {activeStatus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setActiveStatus(null)}>
           <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-sm text-center relative" onClick={(e) => e.stopPropagation()}>
-            <button className="absolute top-2 right-2 text-white/50" onClick={() => setActiveStatus(null)}>✕</button>
+            <button 
+              className="absolute top-3 right-3 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-full border border-white/5 transition-all text-xs font-bold leading-none w-6 h-6 flex items-center justify-center" 
+              onClick={() => setActiveStatus(null)}
+            >
+              ✕
+            </button>
             <div className="flex flex-col items-center gap-3">
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gold">
                 <img src={activeStatus.user.profilePhotoUrl || ""} alt="" className="w-full h-full object-cover" />
