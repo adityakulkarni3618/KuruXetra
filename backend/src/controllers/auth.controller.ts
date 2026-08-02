@@ -138,6 +138,7 @@ export async function login(req: AuthedRequest, res: Response) {
       fullName: user.fullName,
       role: user.role,
       status: user.status,
+      department: user.department,
       captainOf,
     },
   });
