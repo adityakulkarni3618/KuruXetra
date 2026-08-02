@@ -64,6 +64,13 @@ export async function searchUsers(req: AuthedRequest, res: Response) {
         fitnessGoal: true,
         createdAt: true,
         updatedAt: true,
+        posts: {
+          select: {
+            id: true,
+            content: true,
+            createdAt: true
+          }
+        }
       },
     });
 
