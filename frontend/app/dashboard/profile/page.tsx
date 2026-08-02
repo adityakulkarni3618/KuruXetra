@@ -42,6 +42,14 @@ export default function ProfilePage() {
   const [postingStatus, setPostingStatus] = useState(false);
   const [myActiveStatuses, setMyActiveStatuses] = useState<any[]>([]);
 
+  // Create Post States inside Profile page
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostImage, setNewPostImage] = useState("");
+  const [postIsGlobal, setPostIsGlobal] = useState(true);
+  const [postTargetSportId, setPostTargetSportId] = useState("");
+  const [postingPost, setPostingPost] = useState(false);
+  const [sports, setSports] = useState<any[]>([]);
+
   const departments = [
     "Computer Engineering",
     "Information Technology",
@@ -79,6 +87,9 @@ export default function ProfilePage() {
       const allStatuses = await api("/api/social/status/active");
       const selfActive = allStatuses.filter((s: any) => s.userId === me.id);
       setMyActiveStatuses(selfActive);
+
+      const sportsList = await api("/api/sports");
+      setSports(sportsList || []);
     } catch (err: any) {
       setError(err.message || "Failed to load profile");
     }
@@ -202,6 +213,35 @@ export default function ProfilePage() {
     } catch (err: any) {
       setError(err.message || "Failed to delete status");
       setTimeout(() => setError(""), 5000);
+    }
+  }
+
+  // Create post on own profile
+  async function handleCreatePost(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPostContent.trim()) return;
+    setPostingPost(true);
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/social/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          content: newPostContent,
+          imageUrl: newPostImage || undefined,
+          isGlobal: postIsGlobal,
+          targetSportId: postIsGlobal ? undefined : (postTargetSportId || undefined),
+        }),
+      });
+      setMessage("Post published successfully on your profile wall!");
+      setTimeout(() => setMessage(""), 5000);
+      setNewPostContent("");
+      setNewPostImage("");
+    } catch (err: any) {
+      setError(err.message || "Failed to publish post.");
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setPostingPost(false);
     }
   }
 
@@ -396,6 +436,55 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── Create Post Block Card (Horizontal section below upload media rows) ── */}
+      <div className="stat-card mb-8 hover:border-gold/20 transition-all">
+        <h3 className="font-semibold text-white mb-2">Share a Post on Your Profile Wall</h3>
+        <p className="text-xs text-white/50 mb-3">Publish messages, updates, or practice alerts. Control who sees it using visibility checklist options.</p>
+        <form onSubmit={handleCreatePost} className="space-y-3">
+          <textarea
+            className="input-field text-xs min-h-[60px]"
+            placeholder="What is on your mind? Log a victory, update, or practice tip..."
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            required
+          />
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              className="input-field text-xs flex-1 min-w-[200px]"
+              placeholder="Image URL (optional)"
+              value={newPostImage}
+              onChange={(e) => setNewPostImage(e.target.value)}
+            />
+
+            {/* Global Checkbox Toggle */}
+            <label className="flex items-center gap-1.5 text-xs text-white/70 select-none cursor-pointer">
+              <input
+                type="checkbox"
+                checked={postIsGlobal}
+                onChange={(e) => setPostIsGlobal(e.target.checked)}
+              />
+              Global (All Athletes)
+            </label>
+
+            {/* Target Sport Selection */}
+            {!postIsGlobal && (
+              <select
+                className="input-field text-xs py-2 bg-surface max-w-[200px]"
+                value={postTargetSportId}
+                onChange={(e) => setPostTargetSportId(e.target.value)}
+              >
+                <option value="">Select Respective Sport Target</option>
+                {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
+
+            <button type="submit" disabled={postingPost} className="btn-gold text-xs px-4 py-2 shrink-0">
+              {postingPost ? "Publishing..." : "Publish Post"}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* ── Relocated Explore Widgets (Badges & Sports) ── */}
