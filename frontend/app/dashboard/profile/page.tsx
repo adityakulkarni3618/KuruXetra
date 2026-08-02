@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [statusCaption, setStatusCaption] = useState("");
   const [statusFile, setStatusFile] = useState<File | null>(null);
   const [postingStatus, setPostingStatus] = useState(false);
+  const [myActiveStatuses, setMyActiveStatuses] = useState<any[]>([]);
 
   const departments = [
     "Computer Engineering",
@@ -74,6 +75,10 @@ export default function ProfilePage() {
 
       const bList = await api(`/api/users/${me.id}/badges`);
       setBadges(bList);
+
+      const allStatuses = await api("/api/social/status/active");
+      const selfActive = allStatuses.filter((s: any) => s.userId === me.id);
+      setMyActiveStatuses(selfActive);
     } catch (err: any) {
       setError(err.message || "Failed to load profile");
     }
@@ -172,11 +177,31 @@ export default function ProfilePage() {
       setStatusMedia("");
       setStatusCaption("");
       setStatusFile(null);
+      // Reload statuses
+      const allStatuses = await api("/api/social/status/active");
+      const selfActive = allStatuses.filter((s: any) => s.userId === user?.id);
+      setMyActiveStatuses(selfActive);
     } catch (err: any) {
       setError(err.message || "Status upload failed.");
       setTimeout(() => setError(""), 5000);
     } finally {
       setPostingStatus(false);
+    }
+  }
+
+  // Delete status story
+  async function handleDeleteStatus(statusId: string) {
+    if (!confirm("Are you sure you want to delete this status update?")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/social/status/${statusId}`, { method: "DELETE" });
+      setMessage("Status story deleted successfully.");
+      setTimeout(() => setMessage(""), 5000);
+      setMyActiveStatuses((prev) => prev.filter((s) => s.id !== statusId));
+    } catch (err: any) {
+      setError(err.message || "Failed to delete status");
+      setTimeout(() => setError(""), 5000);
     }
   }
 
@@ -296,22 +321,47 @@ export default function ProfilePage() {
             <h3 className="font-semibold text-white mb-2">Add Status Update</h3>
             <p className="text-xs text-white/50 mb-3">Upload temporary photo/video statuses visible on the Leaderboard tab.</p>
           </div>
-          <form onSubmit={handlePostStatus} className="space-y-2">
-            <input
-              type="text"
-              placeholder="Caption text"
-              className="input-field text-xs py-1.5 px-3"
-              value={statusCaption}
-              onChange={(e) => setStatusCaption(e.target.value)}
-            />
-            <label className="btn-primary text-xs block text-center cursor-pointer py-1.5 bg-white/10 hover:bg-white/15">
-              {statusFile ? "✓ File Chosen" : "Attach Photo/Video"}
-              <input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => setStatusFile(e.target.files?.[0] || null)} />
-            </label>
-            <button type="submit" disabled={postingStatus} className="btn-gold text-xs w-full py-1.5">
-              {postingStatus ? "Uploading..." : "Publish Status"}
-            </button>
-          </form>
+          <div>
+            <form onSubmit={handlePostStatus} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Caption text"
+                className="input-field text-xs py-1.5 px-3"
+                value={statusCaption}
+                onChange={(e) => setStatusCaption(e.target.value)}
+              />
+              <label className="btn-primary text-xs block text-center cursor-pointer py-1.5 bg-white/10 hover:bg-white/15">
+                {statusFile ? "✓ File Chosen" : "Attach Photo/Video"}
+                <input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => setStatusFile(e.target.files?.[0] || null)} />
+              </label>
+              <button type="submit" disabled={postingStatus} className="btn-gold text-xs w-full py-1.5">
+                {postingStatus ? "Uploading..." : "Publish Status"}
+              </button>
+            </form>
+
+            {/* Active Statuses List to delete */}
+            {myActiveStatuses.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <p className="text-[10px] font-semibold text-white/50 mb-2 uppercase">My Active Statuses ({myActiveStatuses.length})</p>
+                <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                  {myActiveStatuses.map((status) => (
+                    <div key={status.id} className="flex justify-between items-center bg-surface/50 border border-white/5 p-1.5 rounded text-[10px]">
+                      <span className="truncate max-w-[120px] text-white/70">
+                        {status.caption || (status.mediaUrl ? "📸 Media Status" : "Status Update")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStatus(status.id)}
+                        className="text-red-400 hover:text-red-300 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* College ID Card */}

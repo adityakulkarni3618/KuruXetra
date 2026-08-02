@@ -11,6 +11,7 @@ import {
   createStatus,
   listActiveStatuses,
   viewStatus,
+  deleteStatus,
 } from "../controllers/social.controller";
 
 const router = Router();
@@ -30,5 +31,6 @@ router.post("/posts/:postId/share", requireAuth, sharePost);
 router.post("/status", requireAuth, createStatus);
 router.get("/status/active", requireAuth, listActiveStatuses);
 router.post("/status/:id/view", requireAuth, viewStatus);
+router.delete("/status/:id", requireAuth, deleteStatus);
 
 export default router;

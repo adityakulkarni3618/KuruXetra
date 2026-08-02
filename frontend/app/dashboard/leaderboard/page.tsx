@@ -354,7 +354,19 @@ export default function LeaderboardPage() {
                 <img src={activeStatus.user.profilePhotoUrl || ""} alt="" className="w-full h-full object-cover" />
               </div>
               <h3 className="font-bold">{activeStatus.user.fullName}</h3>
-              {activeStatus.mediaUrl && <img src={activeStatus.mediaUrl} className="w-full rounded-lg my-2" />}
+              {activeStatus.mediaUrl && (
+                activeStatus.mediaUrl.match(/\.(mp4|webm|ogg|mov|m4v)($|\?)/i) || activeStatus.mediaUrl.includes("/video/upload/") ? (
+                  <video 
+                    src={activeStatus.mediaUrl} 
+                    controls 
+                    autoPlay
+                    playsInline
+                    className="w-full max-h-60 rounded-lg my-2 object-contain bg-black"
+                  />
+                ) : (
+                  <img src={activeStatus.mediaUrl} className="w-full max-h-60 rounded-lg my-2 object-contain bg-black" />
+                )
+              )}
               <p className="text-sm italic text-white/70">"{activeStatus.caption}"</p>
               
               <div className="w-full border-t border-white/5 mt-4 pt-4 text-left">

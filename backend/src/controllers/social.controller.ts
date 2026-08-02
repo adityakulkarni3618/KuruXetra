@@ -313,3 +313,19 @@ export async function viewStatus(req: AuthedRequest, res: Response) {
     res.status(500).json({ error: "Failed to record view status" });
   }
 }
+
+// Delete status update
+export async function deleteStatus(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+  const userId = req.user!.id;
+  try {
+    const status = await prisma.statusUpdate.findUnique({ where: { id } });
+    if (!status) return res.status(404).json({ error: "Status update not found" });
+    if (status.userId !== userId) return res.status(403).json({ error: "Unauthorized" });
+
+    await prisma.statusUpdate.delete({ where: { id } });
+    res.json({ message: "Status update deleted successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to delete status" });
+  }
+}
