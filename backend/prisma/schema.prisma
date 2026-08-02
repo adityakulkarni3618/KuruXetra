@@ -58,6 +58,11 @@ model User {
   viceCaptainOf     Sport[]         @relation("SportViceCaptain")
   scheduledMeetings TeamMeeting[]   @relation("UserScheduledMeetings")
   workouts          Workout[]
+  isPublic          Boolean         @default(true)
+  posts             Post[]
+  postLikes         PostLike[]
+  postComments      PostComment[]
+  statusUpdates     StatusUpdate[]
   badges            UserBadge[]
   athleteSessionLogs AthleteSessionLog[]
 }
@@ -303,4 +308,47 @@ model UserBadge {
   earnedAt    DateTime @default(now())
 
   @@unique([userId, badgeId])
+}
+
+model Post {
+  id           String        @id @default(cuid())
+  userId       String
+  content      String
+  imageUrl     String?
+  sharesCount  Int           @default(0)
+  createdAt    DateTime      @default(now())
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes        PostLike[]
+  comments     PostComment[]
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model StatusUpdate {
+  id        String   @id @default(cuid())
+  userId    String
+  mediaUrl  String?
+  caption   String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

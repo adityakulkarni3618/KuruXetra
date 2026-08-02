@@ -147,25 +147,38 @@ export default function AdminSearchAthletesPage() {
         {searchResults.map((user) => (
           <div key={user.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-lg text-white">{user.fullName}</p>
-                  <span className="text-white/30 text-sm">({user.uniqueId})</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
-                    user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                    user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
-                    "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                  }`}>
-                    {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
-                  </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                    user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
-                    user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300"
-                  }`}>{user.status}</span>
+              <div className="flex items-center gap-4">
+                {user.profilePhotoUrl ? (
+                  <img
+                    src={user.profilePhotoUrl}
+                    alt={user.fullName}
+                    className="w-12 h-12 rounded-full object-cover shrink-0 border border-white/10"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-surface-light border border-dashed border-white/10 flex items-center justify-center text-white/20 shrink-0 text-xs">
+                    No pic
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-lg text-white">{user.fullName}</p>
+                    <span className="text-white/30 text-sm">({user.uniqueId})</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                      user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                      "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                    }`}>
+                      {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                      user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
+                      user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300"
+                    }`}>{user.status}</span>
+                  </div>
+                  <p className="text-xs text-white/40 mt-1">
+                    {user.department} · {user.academicYear} · Roll No: {user.rollNumber}
+                  </p>
                 </div>
-                <p className="text-xs text-white/40 mt-1">
-                  {user.department} · {user.academicYear} · Roll No: {user.rollNumber}
-                </p>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {currentUser?.id !== user.id && user.uniqueId !== "KX000001" && (

@@ -12,6 +12,7 @@ import leaderboardRoutes from "./routes/leaderboard.routes";
 import usersRoutes from "./routes/users.routes";
 import adminRoutes from "./routes/admin.routes";
 import adminFeaturesRoutes from "./routes/admin-features.routes";
+import socialRoutes from "./routes/social.routes";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin-features", adminFeaturesRoutes);
+app.use("/api/social", socialRoutes);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

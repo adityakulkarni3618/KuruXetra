@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [badges, setBadges] = useState<any[]>([]);
+  const [isPublic, setIsPublic] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -60,6 +61,7 @@ export default function ProfilePage() {
         setCollegeIdUrl(me.collegeIdUrl || "");
         setProfilePreview(me.profilePhotoUrl || "");
         setIdPreview(me.collegeIdUrl || "");
+        setIsPublic(me.isPublic !== false);
 
         const bList = await api(`/api/users/${me.id}/badges`);
         setBadges(bList);
@@ -257,7 +259,39 @@ export default function ProfilePage() {
           </label>
         </div>
 
-        <div className="flex justify-end">
+        <div className="border-t border-white/5 pt-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">Account Privacy</p>
+            <p className="text-xs text-white/50">Private profiles only show photo, name, and ID in search databases.</p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const nextVal = !isPublic;
+              try {
+                await api("/api/social/me/privacy", {
+                  method: "PATCH",
+                  body: JSON.stringify({ isPublic: nextVal }),
+                });
+                setIsPublic(nextVal);
+                setMessage(`Account status set to ${nextVal ? "Public" : "Private"}.`);
+              } catch (err: any) {
+                setError(err.message || "Failed to update privacy settings");
+              }
+            }}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              isPublic ? "bg-gold" : "bg-white/10"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                isPublic ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className="flex justify-end pt-2">
           <button type="submit" disabled={loading} className="btn-gold">
             Save profile
           </button>
