@@ -12,12 +12,58 @@ export default function OverviewPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [me, setMe] = useState<any>(null);
 
+  // Notifications feed (announcements, sessions, meetings)
+  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+
   useEffect(() => {
     api("/api/attendance/me").then(setAttendance).catch(() => {});
     api("/api/workouts/me").then(setWorkouts).catch(() => {});
     api("/api/running/me").then(setRuns).catch(() => {});
     api("/api/leaderboard").then(setLeaderboard).catch(() => {});
-    api("/api/auth/me").then(setMe).catch(() => {});
+    
+    api("/api/auth/me")
+      .then((meRes) => {
+        setMe(meRes);
+        // Load feed items for all approved sports
+        const approvedSportIds = (meRes.memberships || [])
+          .filter((m: any) => m.status === "APPROVED")
+          .map((m: any) => m.sportId);
+
+        if (approvedSportIds.length > 0) {
+          Promise.all(
+            approvedSportIds.map(async (sportId: string) => {
+              try {
+                const [sessions, announcements, meetings] = await Promise.all([
+                  api(`/api/admin-features/sessions?sportId=${sportId}`),
+                  api(`/api/admin-features/announcements?sportId=${sportId}`),
+                  api(`/api/admin-features/meetings?sportId=${sportId}`),
+                ]);
+                return { sportId, sessions, announcements, meetings };
+              } catch {
+                return { sportId, sessions: [], announcements: [], meetings: [] };
+              }
+            })
+          ).then((results) => {
+            const compiled: any[] = [];
+            results.forEach((res) => {
+              res.sessions.forEach((s: any) =>
+                compiled.push({ type: "session", date: new Date(s.startTime), data: s })
+              );
+              res.meetings.forEach((m: any) =>
+                compiled.push({ type: "meeting", date: new Date(m.scheduledAt), data: m })
+              );
+              res.announcements.forEach((a: any) =>
+                compiled.push({ type: "announcement", date: new Date(a.createdAt), data: a })
+              );
+            });
+            // Sort chronological newest first
+            compiled.sort((a, b) => b.date.getTime() - a.date.getTime());
+            setFeedItems(compiled);
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const myRank = leaderboard.find((r) => r.id === user?.id);
@@ -29,6 +75,7 @@ export default function OverviewPage() {
       <h1 className="font-display text-2xl font-bold mb-1">Welcome back, {user?.fullName?.split(" ")[0]}</h1>
       <p className="text-white/50 text-sm mb-8">Here's where you stand today.</p>
 
+      {/* Grid Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Stat label="Leaderboard rank" value={myRank ? `#${myRank.rank}` : "—"} />
         <Stat label="Total points" value={me ? me.totalPoints : 0} />
@@ -36,39 +83,130 @@ export default function OverviewPage() {
         <Stat label="Distance logged" value={`${totalDistance.toFixed(1)} km`} />
       </div>
 
-      <div className="stat-card mb-6">
-        <h2 className="font-display font-semibold mb-2">Ground status</h2>
-        {openCheckIn ? (
-          <p className="text-sm text-green-400">
-            Currently checked in since {new Date(openCheckIn.timeIn).toLocaleTimeString()}
-          </p>
-        ) : (
-          <p className="text-sm text-white/50">You're not checked in. Head to the Attendance tab when you arrive.</p>
-        )}
+      {/* Ground Status and Notifications Feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Left Column: Status & Activity Feed */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="stat-card">
+            <h2 className="font-display font-semibold mb-2">Ground status</h2>
+            {openCheckIn ? (
+              <p className="text-sm text-green-400">
+                Currently checked in since {new Date(openCheckIn.timeIn).toLocaleTimeString()}
+              </p>
+            ) : (
+              <p className="text-sm text-white/50">You're not checked in. Head to the Attendance tab when you arrive.</p>
+            )}
+          </div>
+
+          {/* Notifications Board */}
+          <div className="stat-card">
+            <h2 className="font-display font-semibold mb-3 text-white">Notifications & Alerts</h2>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+              {feedItems.map((item, idx) => {
+                const labelMap: Record<string, { badge: string; color: string }> = {
+                  announcement: { badge: "📢 Announcement", color: "bg-blue/20 text-blue-300 border-blue-300/30" },
+                  meeting: { badge: "🗓 Meeting", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+                  session: { badge: "⚡ Practice Session", color: "bg-green-500/20 text-green-300 border-green-500/30" },
+                };
+                const config = labelMap[item.type];
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedItem(item)}
+                    className="p-3 bg-surface/50 border border-white/5 rounded-lg hover:border-gold/30 cursor-pointer transition-all flex items-start justify-between gap-3"
+                  >
+                    <div className="overflow-hidden">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full border ${config.color}`}>
+                          {config.badge}
+                        </span>
+                        <span className="text-[10px] text-white/30">{item.date.toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-xs font-semibold text-white truncate">{item.data.title || "Announcement"}</p>
+                      <p className="text-[10px] text-white/50 truncate mt-0.5">
+                        {item.type === "announcement" ? item.data.body : item.data.description || "View schedule details"}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gold shrink-0 self-center">View Details &rarr;</span>
+                  </div>
+                );
+              })}
+              {feedItems.length === 0 && (
+                <p className="text-xs text-white/40 italic py-4">No recent team notifications.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar: Recent Workouts & Runs */}
+        <div className="space-y-6">
+          <div className="stat-card">
+            <h2 className="font-display font-semibold mb-3">Recent workouts</h2>
+            {workouts.slice(0, 4).map((w) => (
+              <div key={w.id} className="flex justify-between text-xs py-2 border-b border-border last:border-0">
+                <span className="text-white truncate max-w-[140px]">{w.name}</span>
+                <span className="text-white/40">{new Date(w.createdAt).toLocaleDateString()}</span>
+              </div>
+            ))}
+            {workouts.length === 0 && <p className="text-xs text-white/40">No workouts logged yet.</p>}
+          </div>
+
+          <div className="stat-card">
+            <h2 className="font-display font-semibold mb-3">Recent runs</h2>
+            {runs.slice(0, 4).map((r) => (
+              <div key={r.id} className="flex justify-between text-xs py-2 border-b border-border last:border-0">
+                <span className="text-white">{r.distanceKm} km</span>
+                <span className="text-white/40">{new Date(r.createdAt).toLocaleDateString()}</span>
+              </div>
+            ))}
+            {runs.length === 0 && <p className="text-xs text-white/40">No runs logged yet.</p>}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="stat-card">
-          <h2 className="font-display font-semibold mb-3">Recent workouts</h2>
-          {workouts.slice(0, 5).map((w) => (
-            <div key={w.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
-              <span>{w.name}</span>
-              <span className="text-white/40">{new Date(w.createdAt).toLocaleDateString()}</span>
+      {/* ── Notification Detail Modal ── */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4" onClick={() => setSelectedItem(null)}>
+          <div
+            className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-md shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4 pb-2 border-b border-white/5">
+              <div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border bg-gold/10 text-gold border-gold/30">
+                  {selectedItem.type} Details
+                </span>
+                <p className="text-xs text-white/30 mt-1">Date: {selectedItem.date.toLocaleString()}</p>
+              </div>
+              <button onClick={() => setSelectedItem(null)} className="text-white/40 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          ))}
-          {workouts.length === 0 && <p className="text-sm text-white/40">No workouts logged yet.</p>}
-        </div>
-        <div className="stat-card">
-          <h2 className="font-display font-semibold mb-3">Recent runs</h2>
-          {runs.slice(0, 5).map((r) => (
-            <div key={r.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
-              <span>{r.distanceKm} km</span>
-              <span className="text-white/40">{new Date(r.createdAt).toLocaleDateString()}</span>
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-display font-bold text-lg text-white mb-2">{selectedItem.data.title || "Announcement"}</h3>
+                <p className="text-sm text-white/70 whitespace-pre-wrap">
+                  {selectedItem.type === "announcement" ? selectedItem.data.body : selectedItem.data.description || "No further details description provided."}
+                </p>
+              </div>
+
+              {selectedItem.type === "session" && selectedItem.data.workouts?.length > 0 && (
+                <div className="bg-surface/50 border border-white/5 p-3 rounded-lg">
+                  <p className="text-xs font-semibold text-white/50 uppercase mb-2">Practice Workouts</p>
+                  <ul className="list-disc pl-5 text-xs text-white/80 space-y-1">
+                    {selectedItem.data.workouts.map((w: any) => (
+                      <li key={w.id}>{w.customName || w.workoutType?.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          ))}
-          {runs.length === 0 && <p className="text-sm text-white/40">No runs logged yet.</p>}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
