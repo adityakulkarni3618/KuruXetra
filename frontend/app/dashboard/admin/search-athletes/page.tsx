@@ -112,32 +112,40 @@ export default function AdminSearchAthletesPage() {
           <h1 className="font-display text-2xl font-bold mb-1 text-white">Search Athlete Database</h1>
           <p className="text-white/50 text-sm">Query full user profiles, reset passwords, suspend, or promote athletes.</p>
         </div>
-        {searchResults.length > 0 && (
-          <button
-            onClick={() => {
-              const { printReport } = require("@/lib/export");
-              const headers = ["Athletic ID", "Full Name", "Roll Number", "Department", "Academic Year", "Roster Status", "Athlete Posts List"];
-              const rows = searchResults.map((u: any) => {
-                const postsStr = u.posts && u.posts.length > 0
-                  ? u.posts.map((p: any, idx: number) => `${idx + 1}. "${p.content}" (${new Date(p.createdAt).toLocaleDateString()})`).join("<br/>")
-                  : "No posts logged";
-                return [
-                  u.uniqueId,
-                  u.fullName,
-                  u.rollNumber,
-                  u.department,
-                  u.academicYear,
-                  u.status,
-                  postsStr
-                ];
-              });
-              printReport("Kuruxetra Athletes & Social Posts Report", headers, rows);
-            }}
-            className="btn-gold text-xs px-3.5 py-2 shrink-0"
-          >
-            Download PDF Report
-          </button>
-        )}
+        <button
+          onClick={async () => {
+            let list = searchResults;
+            if (list.length === 0) {
+              try {
+                // Fetch all athletes if no query is active
+                list = await api("/api/admin/users/search");
+              } catch (err: any) {
+                alert("Failed to fetch all athletes: " + err.message);
+                return;
+              }
+            }
+            const { printReport } = require("@/lib/export");
+            const headers = ["Athletic ID", "Full Name", "Roll Number", "Department", "Academic Year", "Roster Status", "Athlete Posts List"];
+            const rows = list.map((u: any) => {
+              const postsStr = u.posts && u.posts.length > 0
+                ? u.posts.map((p: any, idx: number) => `${idx + 1}. "${p.content}" (${new Date(p.createdAt).toLocaleDateString()})`).join("<br/>")
+                : "No posts logged";
+              return [
+                u.uniqueId,
+                u.fullName,
+                u.rollNumber,
+                u.department,
+                u.academicYear,
+                u.status,
+                postsStr
+              ];
+            });
+            printReport("Kuruxetra Athletes & Social Posts Report", headers, rows);
+          }}
+          className="btn-gold text-xs px-3.5 py-2 shrink-0"
+        >
+          Download PDF Report
+        </button>
       </div>
 
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
