@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
@@ -25,6 +25,16 @@ export default function LoginPage() {
   const [fpError, setFpError] = useState("");
   const [fpMessage, setFpMessage] = useState("");
   const [fpLoading, setFpLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const regId = params.get("registeredId");
+      if (regId) {
+        setUniqueId(regId);
+      }
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
