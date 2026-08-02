@@ -66,6 +66,8 @@ export default function LeaderboardPage() {
   // Social actions inside profile view
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostImage, setNewPostImage] = useState("");
+  const [postIsGlobal, setPostIsGlobal] = useState(true);
+  const [postTargetSportId, setPostTargetSportId] = useState("");
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [posting, setPosting] = useState(false);
 
@@ -73,6 +75,8 @@ export default function LeaderboardPage() {
   const [statuses, setStatuses] = useState<any[]>([]);
   const [statusMedia, setStatusMedia] = useState("");
   const [statusCaption, setStatusCaption] = useState("");
+  const [statusIsGlobal, setStatusIsGlobal] = useState(true);
+  const [statusTargetSportId, setStatusTargetSportId] = useState("");
   const [postingStatus, setPostingStatus] = useState(false);
 
   // Tabs: "leaderboard" | "explore-badges"
@@ -148,7 +152,12 @@ export default function LeaderboardPage() {
     try {
       const p = await api("/api/social/posts", {
         method: "POST",
-        body: JSON.stringify({ content: newPostContent, imageUrl: newPostImage || undefined }),
+        body: JSON.stringify({ 
+          content: newPostContent, 
+          imageUrl: newPostImage || undefined,
+          isGlobal: postIsGlobal,
+          targetSportId: postIsGlobal ? undefined : (postTargetSportId || undefined),
+        }),
       });
       setProfilePosts(prev => [p, ...prev]);
       setNewPostContent("");
@@ -218,7 +227,12 @@ export default function LeaderboardPage() {
     try {
       await api("/api/social/status", {
         method: "POST",
-        body: JSON.stringify({ mediaUrl: statusMedia || undefined, caption: statusCaption || undefined }),
+        body: JSON.stringify({ 
+          mediaUrl: statusMedia || undefined, 
+          caption: statusCaption || undefined,
+          isGlobal: statusIsGlobal,
+          targetSportId: statusIsGlobal ? undefined : (statusTargetSportId || undefined),
+        }),
       });
       setStatusMedia("");
       setStatusCaption("");
@@ -254,7 +268,7 @@ export default function LeaderboardPage() {
         </h2>
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide items-center">
           {/* Post own status trigger */}
-          <form onSubmit={handleCreateStatus} className="flex gap-2 shrink-0 items-center bg-surface/60 border border-white/5 p-2 rounded-lg text-xs">
+          <form onSubmit={handleCreateStatus} className="flex gap-2 shrink-0 items-center bg-surface/60 border border-white/5 p-2 rounded-lg text-xs flex-wrap max-w-sm md:max-w-none">
             <input
               className="input-field py-1 px-2 text-[10px] w-24"
               placeholder="Media URL"
@@ -267,6 +281,29 @@ export default function LeaderboardPage() {
               value={statusCaption}
               onChange={(e) => setStatusCaption(e.target.value)}
             />
+            
+            {/* Global Checkbox */}
+            <label className="flex items-center gap-1 text-[10px] text-white/60 shrink-0 select-none">
+              <input 
+                type="checkbox" 
+                checked={statusIsGlobal} 
+                onChange={(e) => setStatusIsGlobal(e.target.checked)} 
+              />
+              Global
+            </label>
+
+            {/* Target Sport Dropdown */}
+            {!statusIsGlobal && (
+              <select
+                className="input-field py-1 px-1 text-[9px] w-24 bg-surface"
+                value={statusTargetSportId}
+                onChange={(e) => setStatusTargetSportId(e.target.value)}
+              >
+                <option value="">Select Sport</option>
+                {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
+
             <button type="submit" disabled={postingStatus} className="btn-gold text-[10px] py-1 px-2 shrink-0">
               Post Status
             </button>
@@ -575,13 +612,36 @@ export default function LeaderboardPage() {
                       onChange={(e) => setNewPostContent(e.target.value)}
                       required
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center flex-wrap">
                       <input
                         className="input-field text-xs flex-1"
                         placeholder="Image URL (optional)"
                         value={newPostImage}
                         onChange={(e) => setNewPostImage(e.target.value)}
                       />
+                      
+                      {/* Global checkbox check */}
+                      <label className="flex items-center gap-1.5 text-xs text-white/70 select-none cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={postIsGlobal}
+                          onChange={(e) => setPostIsGlobal(e.target.checked)}
+                        />
+                        Global
+                      </label>
+
+                      {/* targetSport selector */}
+                      {!postIsGlobal && (
+                        <select
+                          className="input-field text-xs py-2 bg-surface max-w-[150px]"
+                          value={postTargetSportId}
+                          onChange={(e) => setPostTargetSportId(e.target.value)}
+                        >
+                          <option value="">Select Sport Target</option>
+                          {sports.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      )}
+
                       <button type="submit" disabled={posting} className="btn-gold text-xs px-4 py-2">
                         {posting ? "Posting..." : "Post"}
                       </button>
