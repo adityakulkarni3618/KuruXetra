@@ -20,6 +20,14 @@ export default function SportsPage() {
   const [sessionCheckInStates, setSessionCheckInStates] = useState<Record<string, { checkInTime: string; loading: boolean }>>({});
   const [globalMessage, setGlobalMessage] = useState("");
 
+  const [exploreSport, setExploreSport] = useState<any>(null);
+  const [exploreDetail, setExploreDetail] = useState<{
+    sessions: any[];
+    announcements: any[];
+    meetings: any[];
+  } | null>(null);
+  const [exploreLoading, setExploreLoading] = useState(false);
+
   async function load() {
     const [s, m] = await Promise.all([api("/api/sports"), api("/api/auth/me")]);
     setSports(s);
@@ -51,6 +59,21 @@ export default function SportsPage() {
       setSportDetail({ sessions, announcements, meetings });
     } catch {}
     setDetailLoading(false);
+  }
+
+  async function openExploreDetail(sport: any) {
+    setExploreSport(sport);
+    setExploreLoading(true);
+    setExploreDetail(null);
+    try {
+      const [sessions, announcements, meetings] = await Promise.all([
+        api(`/api/admin-features/sessions?sportId=${sport.id}`),
+        api(`/api/admin-features/announcements?sportId=${sport.id}`),
+        api(`/api/admin-features/meetings?sportId=${sport.id}`),
+      ]);
+      setExploreDetail({ sessions, announcements, meetings });
+    } catch {}
+    setExploreLoading(false);
   }
 
   async function handleSessionCheckIn(sessionId: string) {
@@ -185,7 +208,7 @@ export default function SportsPage() {
               {otherSports.map((s) => {
                 const joined = myMembershipIds.has(s.id);
                 return (
-                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 cursor-pointer flex flex-col justify-between" onClick={() => openSportDetail(s)}>
+                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 cursor-pointer flex flex-col justify-between" onClick={() => openExploreDetail(s)}>
                     <div>
                       <div className="flex justify-between items-start">
                         <div>
@@ -216,6 +239,81 @@ export default function SportsPage() {
             </div>
           </div>
         </>
+      ) : exploreSport ? (
+        // ── Explore Sport Detail Page ─────────────────────────────────────────
+        <div>
+          <div className="mb-6">
+            <button onClick={() => { setExploreSport(null); setExploreDetail(null); setMessage(""); }} className="btn-back">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Back to Sports & Teams
+            </button>
+          </div>
+
+          <div className="mb-6 pb-6 border-b border-white/5">
+            <h1 className="font-display text-3xl font-bold text-white">{exploreSport.teamName || exploreSport.name}</h1>
+            {exploreSport.teamName && <p className="text-white/40 text-sm mt-0.5">{exploreSport.name}</p>}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-xs text-white/50">
+              {exploreSport.captain && <p>👑 Captain: <span className="text-white font-medium">{exploreSport.captain.fullName}</span></p>}
+              {exploreSport.ground && <p>📍 Location: <span className="text-white font-medium">{exploreSport.ground}</span></p>}
+              {exploreSport.practiceTime && <p>⏰ Practice Time: <span className="text-white font-medium">{exploreSport.practiceTime}</span></p>}
+            </div>
+            <div className="mt-4">
+              <button
+                onClick={() => join(exploreSport.id)}
+                disabled={myMembershipIds.has(exploreSport.id)}
+                className="btn-gold text-sm px-6 py-2"
+              >
+                {myMembershipIds.has(exploreSport.id) ? "Join Request Submitted" : "Send Join Request"}
+              </button>
+            </div>
+          </div>
+
+          {exploreLoading && <div className="text-white/40 text-center py-10">Loading team feed...</div>}
+
+          {exploreDetail && !exploreLoading && (
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Chronological Feed Column */}
+              <div className="md:col-span-2 space-y-4">
+                <h2 className="font-display font-semibold text-lg text-white mb-2 font-medium">Team Activity Preview</h2>
+                {buildFeed(exploreDetail).map((item, idx) => {
+                  if (item.type === "announcement") {
+                    return (
+                      <div key={idx} className="stat-card border border-blue/10 opacity-75">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue/20 text-blue-300">📢 Announcement</span>
+                        </div>
+                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
+                        <p className="text-xs text-white/50 mt-2 whitespace-pre-wrap">{item.data.body}</p>
+                      </div>
+                    );
+                  }
+                  if (item.type === "meeting") {
+                    return (
+                      <div key={idx} className="stat-card border border-purple-500/10 opacity-75">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">🗓 Meeting</span>
+                        </div>
+                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
+                      </div>
+                    );
+                  }
+                  if (item.type === "session") {
+                    return (
+                      <div key={idx} className="stat-card border border-green-500/10 opacity-75">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-300">⚡ Practice Session</span>
+                        </div>
+                        <h3 className="font-display font-semibold text-white">{item.data.title}</h3>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+                {buildFeed(exploreDetail).length === 0 && <p className="text-sm text-white/30 italic">No public logs available.</p>}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         // ── Sport Detail / Activity Feed & Reminders ─────────────────────────
         <div>

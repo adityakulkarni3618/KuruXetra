@@ -252,6 +252,22 @@ export default function ProfilePage() {
                 Delete Photo
               </button>
             )}
+
+            {/* Badges Earned (relocated here) */}
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-xs font-semibold text-white/50 mb-2 uppercase">My Badges ({badges.length})</p>
+              <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                {badges.map((ub) => (
+                  <div key={ub.id} className="p-2 rounded bg-surface border border-gold/15 flex flex-col gap-1">
+                    <p className="text-[10px] font-bold text-gold">{ub.badge.name}</p>
+                    <p className="text-[8px] text-white/60 leading-tight">{ub.badge.description}</p>
+                  </div>
+                ))}
+                {badges.length === 0 && (
+                  <p className="text-[10px] text-white/40 italic">No badges earned yet.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -401,22 +417,7 @@ export default function ProfilePage() {
         </div>
       </form>
 
-      {/* Badges Earned */}
-      <h2 className="font-display font-semibold mb-4">My Badges ({badges.length})</h2>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-        {badges.map((ub) => (
-          <div key={ub.id} className="stat-card border border-gold/10 hover:border-gold/30 transition-all flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <p className="font-bold text-gold text-base">{ub.badge.name}</p>
-              <span className="text-[10px] text-white/30">{new Date(ub.earnedAt).toLocaleDateString()}</span>
-            </div>
-            <p className="text-xs text-white/60 flex-1">{ub.badge.description || "No description provided."}</p>
-          </div>
-        ))}
-        {badges.length === 0 && (
-          <p className="text-sm text-white/40 md:col-span-3">You haven't earned any badges yet. Keep practicing!</p>
-        )}
-      </div>
+
 
       {/* ── Privacy Confirmation Modal (Instagram details) ── */}
       {showPrivacyConfirm && (

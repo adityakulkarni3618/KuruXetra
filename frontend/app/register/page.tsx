@@ -179,7 +179,7 @@ export default function RegisterPage() {
       });
 
       setSuccess(`Account registered successfully! Athlete ID: ${res.uniqueId} — save it, you'll need it to log in. ${res.message}`);
-      setTimeout(() => router.push("/login"), 3500);
+      setTimeout(() => router.push(`/login?registeredId=${res.uniqueId}`), 3500);
     } catch (err: any) {
       setError(err.message);
     } finally {
