@@ -106,8 +106,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
 
         {/* Back to Home */}
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors mb-6">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 hover:text-white transition-all mb-8">
+          <svg className="w-3.5 h-3.5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           Back to Home

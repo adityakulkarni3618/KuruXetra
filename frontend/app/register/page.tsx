@@ -195,8 +195,11 @@ export default function RegisterPage() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gold/5 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="relative">
-          <Link href="/" className="text-xs text-white/50 hover:text-white transition-colors">
-            ← Back to home
+          <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 hover:text-white transition-all mb-4">
+            <svg className="w-3.5 h-3.5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
           </Link>
           <h1 className="font-display text-3xl font-bold mt-4 mb-2 tracking-tight">
             Register Athlete Account
