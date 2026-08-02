@@ -337,7 +337,7 @@ export default function ProfilePage() {
             <h3 className="font-semibold text-white mb-2">Explore Badges</h3>
             <p className="text-xs text-white/50 mb-3">View all available college badges and learn how you can earn them.</p>
           </div>
-          <Link href="/dashboard/leaderboard" className="btn-gold text-xs block text-center py-2">
+          <Link href="/dashboard/leaderboard?tab=explore-badges" className="btn-gold text-xs block text-center py-2">
             Explore Available Badges &rarr;
           </Link>
         </div>
