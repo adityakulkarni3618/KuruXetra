@@ -231,6 +231,19 @@ export default function LeaderboardPage() {
     }
   }
 
+  // Stories view modal state
+  const [activeStatus, setActiveStatus] = useState<any>(null);
+
+  // Mark status as viewed and open status story details popup modal
+  async function handleOpenStatus(item: any) {
+    setActiveStatus(item);
+    try {
+      // Record status view in DB
+      await api(`/api/social/status/${item.id}/view`, { method: "POST" });
+      loadStatuses();
+    } catch {}
+  }
+
   return (
     <div>
       {/* ── Statuses / Stories Bar (WhatsApp style) ── */}
@@ -259,30 +272,66 @@ export default function LeaderboardPage() {
             </button>
           </form>
 
-          {statuses.map((item, idx) => (
-            <div
-              key={idx}
-              onClick={() => fetchUserProfile(item.user.id)}
-              className="flex flex-col items-center shrink-0 cursor-pointer text-center group"
-            >
-              <div className="w-10 h-10 rounded-full border-2 border-gold p-0.5 group-hover:scale-105 transition-transform">
-                {item.user.profilePhotoUrl ? (
-                  <img src={item.user.profilePhotoUrl} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-[10px] text-white/40">
-                    {item.user.fullName.charAt(0)}
-                  </div>
-                )}
+          {statuses.map((item, idx) => {
+            const hasViewed = item.views?.some((v: any) => v.viewerId === user?.id);
+            return (
+              <div
+                key={idx}
+                onClick={() => handleOpenStatus(item)}
+                className="flex flex-col items-center shrink-0 cursor-pointer text-center group"
+              >
+                <div className={`w-10 h-10 rounded-full border-2 p-0.5 group-hover:scale-105 transition-transform ${
+                  hasViewed ? "border-white/10" : "border-green-500"
+                }`}>
+                  {item.user.profilePhotoUrl ? (
+                    <img src={item.user.profilePhotoUrl} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-[10px] text-white/40">
+                      {item.user.fullName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[10px] text-white/60 truncate max-w-[60px] mt-1">{item.user.fullName.split(" ")[0]}</span>
+                {item.caption && <span className="text-[8px] text-gold/80 italic max-w-[60px] truncate font-medium">"{item.caption}"</span>}
               </div>
-              <span className="text-[10px] text-white/60 truncate max-w-[60px] mt-1">{item.user.fullName.split(" ")[0]}</span>
-              {item.caption && <span className="text-[8px] text-gold/80 italic max-w-[60px] truncate">"{item.caption}"</span>}
-            </div>
-          ))}
+            );
+          })}
           {statuses.length === 0 && (
             <span className="text-xs text-white/30 italic pl-2">No active statuses from teammates.</span>
           )}
         </div>
       </div>
+
+      {/* Status Detail Modal */}
+      {activeStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setActiveStatus(null)}>
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-sm text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button className="absolute top-2 right-2 text-white/50" onClick={() => setActiveStatus(null)}>✕</button>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gold">
+                <img src={activeStatus.user.profilePhotoUrl || ""} alt="" className="w-full h-full object-cover" />
+              </div>
+              <h3 className="font-bold">{activeStatus.user.fullName}</h3>
+              {activeStatus.mediaUrl && <img src={activeStatus.mediaUrl} className="w-full rounded-lg my-2" />}
+              <p className="text-sm italic text-white/70">"{activeStatus.caption}"</p>
+              
+              <div className="w-full border-t border-white/5 mt-4 pt-4 text-left">
+                <div className="text-[10px] text-white/30 mb-2">👁️ Viewed by {activeStatus.views?.length || 0} people</div>
+                {activeStatus.userId === user?.id && activeStatus.views?.length > 0 && (
+                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                    {activeStatus.views.map((v: any) => (
+                      <div key={v.id} className="flex justify-between items-center bg-surface-light/50 p-1.5 rounded border border-white/5 text-[10px]">
+                        <span className="font-semibold text-white">{v.viewer.fullName}</span>
+                        <span className="text-white/40 font-mono">({v.viewer.uniqueId})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Switcher Headers */}
       <div className="flex gap-4 border-b border-white/5 pb-3 mb-6">

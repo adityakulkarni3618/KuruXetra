@@ -10,6 +10,7 @@ import {
   sharePost,
   createStatus,
   listActiveStatuses,
+  viewStatus,
 } from "../controllers/social.controller";
 
 const router = Router();
@@ -28,5 +29,6 @@ router.post("/posts/:postId/share", requireAuth, sharePost);
 // Stories
 router.post("/status", requireAuth, createStatus);
 router.get("/status/active", requireAuth, listActiveStatuses);
+router.post("/status/:id/view", requireAuth, viewStatus);
 
 export default router;
