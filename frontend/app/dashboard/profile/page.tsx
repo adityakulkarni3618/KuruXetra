@@ -88,14 +88,20 @@ export default function ProfilePage() {
   };
 
   async function uploadToCloudinary(file: File): Promise<string> {
+    const cloudName = "rw3wmwga";
+    const uploadPreset = "ksms_uploads";
+
     const data = new FormData();
     data.append("file", file);
-    data.append("upload_preset", "ksms_preset");
-    const res = await fetch("https://api.cloudinary.com/v1_1/dczf74fhl/image/upload", {
+    data.append("upload_preset", uploadPreset);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: "POST",
       body: data,
     });
-    if (!res.ok) throw new Error("Image upload failed");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error?.message || "Image upload failed");
+    }
     const json = await res.json();
     return json.secure_url;
   }
