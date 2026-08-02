@@ -400,7 +400,17 @@ export default function LeaderboardPage() {
                     <h2 className="font-display font-bold text-white text-xl">{selectedProfile.fullName}</h2>
                     <span className="text-xs text-white/30 font-mono">({selectedProfile.uniqueId})</span>
                   </div>
-                  <p className="text-xs text-gold capitalize mt-0.5">{selectedProfile.role.toLowerCase()}</p>
+                  {/* Badges Subheading */}
+                  {selectedProfile.isFullProfile && (selectedProfile as any).badges?.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap mt-1">
+                      {(selectedProfile as any).badges.map((ub: any) => (
+                        <span key={ub.id} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/25">
+                          🏆 {ub.badge.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-gold capitalize mt-1">{selectedProfile.role.toLowerCase()}</p>
                   <p className="text-[10px] text-white/50 mt-1">
                     🔒 Account Type: <span className="font-bold text-white">{selectedProfile.isPublic ? "Public" : "Private"}</span>
                   </p>

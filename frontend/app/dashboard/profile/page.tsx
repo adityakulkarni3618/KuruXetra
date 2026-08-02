@@ -329,6 +329,31 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Relocated Explore Widgets (Badges & Sports) ── */}
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Explore Badges */}
+        <div className="stat-card hover:border-gold/20 transition-all flex flex-col justify-between">
+          <div>
+            <h3 className="font-semibold text-white mb-2">Explore Badges</h3>
+            <p className="text-xs text-white/50 mb-3">View all available college badges and learn how you can earn them.</p>
+          </div>
+          <Link href="/dashboard/leaderboard" className="btn-gold text-xs block text-center py-2">
+            Explore Available Badges &rarr;
+          </Link>
+        </div>
+
+        {/* Explore Sports Card */}
+        <div className="stat-card hover:border-gold/20 transition-all flex flex-col justify-between">
+          <div>
+            <h3 className="font-semibold text-white mb-2">Explore Sports</h3>
+            <p className="text-xs text-white/50 mb-3">Browse all available sports teams at Kuruxetra and check practice times.</p>
+          </div>
+          <Link href="/dashboard/sports" className="btn-gold text-xs block text-center py-2">
+            Browse Sports & Teams &rarr;
+          </Link>
+        </div>
+      </div>
+
       {/* ── Settings Form ── */}
       <form onSubmit={saveProfile} className="stat-card grid gap-4 mb-8">
         <div className="grid md:grid-cols-2 gap-4">
