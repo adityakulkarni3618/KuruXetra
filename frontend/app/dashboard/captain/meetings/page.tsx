@@ -190,75 +190,109 @@ export default function CaptainMeetingsPage() {
         {/* List & Score */}
         <div className="space-y-4">
           <h2 className="font-display font-semibold text-white">Meeting Schedule ({meetings.length})</h2>
-          {meetings.map((meeting) => (
-            <div key={meeting.id} className="stat-card border border-white/5 hover:border-gold/20 transition-all">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-display font-semibold text-white">{meeting.title}</h3>
-                  <p className="text-xs text-white/40">Scheduled for {new Date(meeting.scheduledAt).toLocaleString()}</p>
+          {meetings.map((meeting) => {
+            const isEnded = meeting.status === "ENDED";
+            return (
+              <div key={meeting.id} className="stat-card border border-white/5 hover:border-gold/20 transition-all">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display font-semibold text-white">{meeting.title}</h3>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                        !isEnded ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/40"
+                      }`}>
+                        {meeting.status || "ACTIVE"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/40 mt-1">Scheduled for {new Date(meeting.scheduledAt).toLocaleString()}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {!isEnded && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm("Are you sure you want to end this meeting? Further scoring will be closed.")) return;
+                          try {
+                            await api(`/api/admin-features/meetings/${meeting.id}/end`, { method: "POST" });
+                            setMessage("Meeting ended successfully.");
+                            await load();
+                          } catch (err: any) {
+                            setError(err.message);
+                          }
+                        }}
+                        className="text-xs text-gold border border-gold/20 bg-gold/10 px-2 py-0.5 rounded hover:bg-gold/20 font-medium"
+                        type="button"
+                      >
+                        End Meeting
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteMeeting(meeting.id)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteMeeting(meeting.id)}
-                  className="text-xs text-red-400 hover:text-red-300"
-                  type="button"
-                >
-                  Delete
-                </button>
-              </div>
-              <p className="text-sm text-white/50 mt-3">{meeting.description || "No description provided."}</p>
-              
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <label className="block">
-                  <span className="label">Select athlete</span>
-                  <select
-                    className="input-field text-xs"
-                    value={meetingScores[meeting.id]?.userId || ""}
-                    onChange={(e) => setMeetingScores((prev) => ({
-                      ...prev,
-                      [meeting.id]: { userId: e.target.value, points: prev[meeting.id]?.points || "" },
-                    }))}
-                  >
-                    <option value="">Choose athlete</option>
-                    {approved.map((m) => (
-                      <option key={m.user.id} value={m.user.id}>{m.user.fullName}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="label">Points (0-10)</span>
-                  <input
-                    className="input-field text-xs"
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={meetingScores[meeting.id]?.points || ""}
-                    onChange={(e) => setMeetingScores((prev) => ({
-                      ...prev,
-                      [meeting.id]: { userId: prev[meeting.id]?.userId || "", points: e.target.value },
-                    }))}
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                onClick={() => scoreMeeting(meeting.id)}
-                className="btn-gold mt-4 text-xs py-1.5 px-3"
-              >
-                Record score
-              </button>
+                <p className="text-sm text-white/50 mt-3">{meeting.description || "No description provided."}</p>
+                
+                {!isEnded && (
+                  <>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <label className="block">
+                        <span className="label">Select athlete</span>
+                        <select
+                          className="input-field text-xs"
+                          value={meetingScores[meeting.id]?.userId || ""}
+                          onChange={(e) => setMeetingScores((prev) => ({
+                            ...prev,
+                            [meeting.id]: { userId: e.target.value, points: prev[meeting.id]?.points || "" },
+                          }))}
+                        >
+                          <option value="">Choose athlete</option>
+                          {approved.map((m) => (
+                            <option key={m.user.id} value={m.user.id}>{m.user.fullName}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block">
+                        <span className="label">Points (0-10)</span>
+                        <input
+                          className="input-field text-xs"
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={meetingScores[meeting.id]?.points || ""}
+                          onChange={(e) => setMeetingScores((prev) => ({
+                            ...prev,
+                            [meeting.id]: { userId: prev[meeting.id]?.userId || "", points: e.target.value },
+                          }))}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => scoreMeeting(meeting.id)}
+                      className="btn-gold mt-4 text-xs py-1.5 px-3"
+                    >
+                      Record score
+                    </button>
+                  </>
+                )}
 
-              {meeting.scores?.length > 0 && (
-                <div className="mt-4 text-xs text-white/50 border-t border-white/5 pt-3">
-                  <p className="font-medium mb-2 text-white">Existing scores</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {meeting.scores.map((score: any) => (
-                      <li key={score.id}>{score.user.fullName}: {score.points} pts</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ))}
+                {meeting.scores?.length > 0 && (
+                  <div className="mt-4 text-xs text-white/50 border-t border-white/5 pt-3">
+                    <p className="font-medium mb-2 text-white">Scores awarded</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {meeting.scores.map((score: any) => (
+                        <li key={score.id}>{score.user.fullName}: {score.points} pts</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
           {meetings.length === 0 && <p className="text-sm text-white/40">No meetings scheduled yet.</p>}
         </div>
       </div>

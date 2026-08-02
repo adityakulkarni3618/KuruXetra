@@ -9,13 +9,15 @@ export default function CaptainAttendancePage() {
   const [mySport, setMySport] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
-  const [markForm, setMarkForm] = useState({ userId: "", ground: "" });
+  const [ground, setGround] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<Record<string, boolean>>({});
   const [dateFilter, setDateFilter] = useState("all"); // "all", "today", "week", "month", "custom"
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [marking, setMarking] = useState(false);
 
   async function load() {
     setError("");
@@ -31,6 +33,9 @@ export default function CaptainAttendancePage() {
         ]);
         setMembers(mems);
         setAttendance(att);
+        
+        // Reset selections
+        setSelectedUserIds({});
       }
     } catch (err: any) {
       setError(err.message);
@@ -43,30 +48,58 @@ export default function CaptainAttendancePage() {
     load();
   }, []);
 
-  async function markAthleteAttendance(e: React.FormEvent) {
+  const approved = members.filter((m) => m.status === "APPROVED");
+
+  async function submitBatchMark(e: React.FormEvent) {
     e.preventDefault();
-    if (!markForm.userId) {
-      setError("Please select an athlete to mark attendance.");
+    const userIds = Object.keys(selectedUserIds).filter((id) => selectedUserIds[id]);
+    if (userIds.length === 0) {
+      setError("Please select at least one team member.");
       return;
     }
     setError("");
     setMessage("");
+    setMarking(true);
     try {
-      await api("/api/attendance/mark", {
+      const res = await api("/api/attendance/batch-mark", {
         method: "POST",
         body: JSON.stringify({
-          userId: markForm.userId,
+          userIds,
           sportId: mySport.id,
-          ground: markForm.ground || undefined,
+          ground: ground || undefined,
         }),
       });
-      setMarkForm({ userId: "", ground: "" });
-      setMessage("Attendance marked successfully.");
+      if (res.errors && res.errors.length > 0) {
+        setError(res.errors.join(" | "));
+      }
+      setMessage(`Successfully marked attendance for ${res.markedCount} team members.`);
+      setGround("");
       await load();
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setMarking(false);
     }
   }
+
+  const toggleSelect = (userId: string) => {
+    setSelectedUserIds((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
+  const selectAll = () => {
+    const nextSelections: Record<string, boolean> = {};
+    approved.forEach((m) => {
+      nextSelections[m.user.id] = true;
+    });
+    setSelectedUserIds(nextSelections);
+  };
+
+  const selectNone = () => {
+    setSelectedUserIds({});
+  };
 
   // Filtering logs
   const filteredAttendance = attendance.filter((a) => {
@@ -126,8 +159,6 @@ export default function CaptainAttendancePage() {
     return <div className="text-white/40 text-center py-10">Loading attendance reports...</div>;
   }
 
-  const approved = members.filter((m) => m.status === "APPROVED");
-
   return (
     <div>
       <div className="mb-6">
@@ -140,7 +171,7 @@ export default function CaptainAttendancePage() {
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>
           <h1 className="font-display text-2xl font-bold mb-1 text-white">Attendance Reports</h1>
-          <p className="text-white/50 text-sm">Mark roster attendance and export filtered history logs for {mySport?.name}.</p>
+          <p className="text-white/50 text-sm">Mark roster attendance using checkboxes and export history logs for {mySport?.name}.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={handleExportCSV} className="btn-primary text-xs px-3.5 py-2">Export CSV</button>
@@ -151,35 +182,58 @@ export default function CaptainAttendancePage() {
       {error && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
       {message && <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">{message}</div>}
 
-      {/* Mark Attendance Card */}
+      {/* Checkbox attendance marking */}
       <div className="stat-card mb-8">
-        <h2 className="font-display font-semibold mb-3 text-white">Mark present</h2>
-        <form onSubmit={markAthleteAttendance} className="grid md:grid-cols-3 gap-4 items-end">
-          <label className="block">
-            <span className="label">Select athlete</span>
-            <select
-              className="input-field"
-              value={markForm.userId}
-              onChange={(e) => setMarkForm((prev) => ({ ...prev, userId: e.target.value }))}
-              required
-            >
-              <option value="">Choose athlete</option>
-              {approved.map((m) => (
-                <option key={m.user.id} value={m.user.id}>{m.user.fullName}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="label">Ground</span>
-            <input
-              className="input-field"
-              value={markForm.ground}
-              onChange={(e) => setMarkForm((prev) => ({ ...prev, ground: e.target.value }))}
-              placeholder="e.g. Main Ground"
-            />
-          </label>
-          <button type="submit" className="btn-gold">Mark present</button>
-        </form>
+        <h2 className="font-display font-semibold mb-2 text-white">Mark Daily Attendance</h2>
+        <p className="text-xs text-white/40 mb-4">Select all team members currently present on the field today.</p>
+        
+        {approved.length === 0 ? (
+          <p className="text-sm text-white/40">No approved members on the roster to mark.</p>
+        ) : (
+          <form onSubmit={submitBatchMark} className="space-y-4">
+            <div className="flex gap-3 mb-3">
+              <button type="button" onClick={selectAll} className="text-xs text-gold border border-gold/15 bg-gold/5 px-2.5 py-1 rounded">Select All</button>
+              <button type="button" onClick={selectNone} className="text-xs text-white/40 border border-white/10 px-2.5 py-1 rounded">Deselect All</button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-2 border-b border-white/5 pb-4">
+              {approved.map((m) => {
+                const isSelected = !!selectedUserIds[m.user.id];
+                return (
+                  <label key={m.user.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-150 ${
+                    isSelected ? "border-gold/45 bg-gold/5" : "border-white/5 bg-surface/50 hover:border-white/15"
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(m.user.id)}
+                      className="rounded border-white/20 bg-surface text-gold focus:ring-gold"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-white">{m.user.fullName}</p>
+                      <p className="text-[10px] text-white/40">{m.user.uniqueId}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 pt-2">
+              <label className="block flex-1 max-w-sm">
+                <span className="label text-xs">Ground Location (optional)</span>
+                <input
+                  className="input-field text-xs"
+                  value={ground}
+                  onChange={(e) => setGround(e.target.value)}
+                  placeholder="e.g. Main ground, nets"
+                />
+              </label>
+              <button type="submit" disabled={marking} className="btn-gold px-6">
+                {marking ? "Marking..." : "Submit Attendance"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* Filtering Section */}

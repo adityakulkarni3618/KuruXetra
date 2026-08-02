@@ -98,6 +98,10 @@ export async function scoreMeeting(req: AuthedRequest, res: Response) {
   const sport = await prisma.sport.findUnique({ where: { id: meeting.sportId } });
   if (!sport) return res.status(404).json({ error: "Sport not found" });
 
+  if (meeting.status === "ENDED") {
+    return res.status(400).json({ error: "This meeting has ended. Scores cannot be recorded." });
+  }
+
   if (req.user!.role === "CAPTAIN" && sport.captainId !== req.user!.id) {
     return res.status(403).json({ error: "You can only score meetings for your own sport" });
   }
@@ -401,6 +405,29 @@ export async function endSession(req: AuthedRequest, res: Response) {
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: "Failed to end session" });
+  }
+}
+
+export async function endMeeting(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const meeting = await prisma.teamMeeting.findUnique({ where: { id }, include: { sport: true } });
+    if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+
+    if (req.user!.role === "CAPTAIN" && meeting.sport.captainId !== req.user!.id && meeting.sport.viceCaptainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only end meetings for your own sport" });
+    }
+
+    const updated = await prisma.teamMeeting.update({
+      where: { id },
+      data: { status: "ENDED" },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to end meeting" });
   }
 }
 
