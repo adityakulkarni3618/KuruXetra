@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 const emptyForm = {
@@ -16,7 +15,6 @@ const emptyForm = {
 };
 
 export default function WorkoutsPage() {
-  const router = useRouter();
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [me, setMe] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -26,6 +24,7 @@ export default function WorkoutsPage() {
   const [loading, setLoading] = useState(false);
   const [showLogForm, setShowLogForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [sessionCheckInStates, setSessionCheckInStates] = useState<Record<string, { checkInTime: string; loading: boolean }>>({});
 
   async function load() {
     const [w, m, s] = await Promise.all([
@@ -38,6 +37,25 @@ export default function WorkoutsPage() {
     setSessions(s);
   }
   useEffect(() => { load(); }, []);
+
+  async function handleSessionCheckIn(sessionId: string, sportId: string) {
+    setSessionCheckInStates(prev => ({ ...prev, [sessionId]: { checkInTime: "", loading: true } }));
+    setSessionError("");
+    try {
+      const res = await api("/api/attendance/checkin", {
+        method: "POST",
+        body: JSON.stringify({ sportId }),
+      });
+      setSessionCheckInStates(prev => ({
+        ...prev,
+        [sessionId]: { checkInTime: new Date(res.timeIn).toLocaleTimeString(), loading: false }
+      }));
+      await load();
+    } catch (err: any) {
+      setSessionError(err.message || "Failed to check in.");
+      setSessionCheckInStates(prev => ({ ...prev, [sessionId]: { checkInTime: "", loading: false } }));
+    }
+  }
 
   // ── Log a session exercise ──────────────────────────────────────────────
   async function submitSessionLog(
@@ -208,77 +226,101 @@ export default function WorkoutsPage() {
             Active Training Sessions
           </h2>
           <div className="space-y-4">
-            {activeSessions.map((sess) => (
-              <div key={sess.id} className="stat-card border border-green-500/20 hover:border-green-500/30 transition-all">
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <h3 className="font-display font-semibold text-white">{sess.title}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-green-500/20 text-green-300">ACTIVE</span>
-                  <span className="text-xs text-white/40 ml-auto">{sess.sport?.name} · {new Date(sess.startTime).toLocaleString()}</span>
-                </div>
-                <div className="space-y-2">
-                  {sess.workouts.map((w: any) => {
-                    const exName = w.customName || w.workoutType?.name || "Exercise";
-                    const key = `${sess.id}_${w.id}`;
-                    const myLog = sess.athleteLogs?.find(
-                      (log: any) => log.userId === me?.id &&
-                      (log.customExerciseName === exName || log.workoutTypeId === w.workoutTypeId)
-                    );
-                    const isLogged = !!myLog;
-
-                    return (
-                      <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface p-3 rounded-lg border border-white/5 text-sm">
-                        <div>
-                          <span className="font-medium text-white">{exName}</span>
-                          {isLogged && (
-                            <span className={`text-xs ml-2 font-medium ${
-                              myLog.status === "APPROVED" ? "text-green-400" :
-                              myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
-                            }`}>
-                              ✓ {myLog.value ? `${myLog.value} completed` : "Done"} ({myLog.status})
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {!isLogged ? (
-                            <>
-                              <input
-                                type="number"
-                                min="1"
-                                placeholder="How many?"
-                                className="input-field text-xs py-1.5 px-3 w-28"
-                                value={roundsForm[key] || ""}
-                                onChange={(e) => setRoundsForm({ ...roundsForm, [key]: e.target.value })}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => submitSessionLog(
-                                  sess.id, w.id, exName, true,
-                                  roundsForm[key] ? Number(roundsForm[key]) : undefined
-                                )}
-                                disabled={!roundsForm[key]}
-                                className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40"
-                              >
-                                Submit ✓
-                              </button>
-                            </>
-                          ) : (
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                              myLog.status === "APPROVED" ? "bg-green-500/20 text-green-300" :
-                              myLog.status === "REJECTED" ? "bg-red-500/20 text-red-300" :
-                              "bg-yellow-500/20 text-yellow-300"
-                            }`}>
-                              {myLog.status === "APPROVED" ? "✓ Approved" :
-                               myLog.status === "REJECTED" ? "✗ Rejected" : "⏳ Pending"}
-                            </span>
-                          )}
-                        </div>
+            {activeSessions.map((sess) => {
+              const checkInState = sessionCheckInStates[sess.id] || { checkInTime: "", loading: false };
+              return (
+                <div key={sess.id} className="stat-card border border-green-500/20 hover:border-green-500/30 transition-all">
+                  <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display font-semibold text-white">{sess.title}</h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-green-500/20 text-green-300">ACTIVE</span>
                       </div>
-                    );
-                  })}
-                  {sess.workouts.length === 0 && <p className="text-xs text-white/30">No exercises added yet.</p>}
+                      <p className="text-xs text-white/40 mt-1">{sess.sport?.name} · {new Date(sess.startTime).toLocaleString()}</p>
+                    </div>
+                    {/* Session Check-In Button */}
+                    <div>
+                      {checkInState.checkInTime ? (
+                        <span className="text-xs text-green-400 font-medium bg-green-500/10 px-2 py-1 rounded">
+                          Checked In at {checkInState.checkInTime}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={checkInState.loading}
+                          onClick={() => handleSessionCheckIn(sess.id, sess.sportId)}
+                          className="text-xs text-gold border border-gold/25 bg-gold/5 px-2.5 py-1 rounded hover:bg-gold/15 transition-all font-semibold"
+                        >
+                          {checkInState.loading ? "Checking in..." : "Check In for Session"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {sess.workouts.map((w: any) => {
+                      const exName = w.customName || w.workoutType?.name || "Exercise";
+                      const key = `${sess.id}_${w.id}`;
+                      const myLog = sess.athleteLogs?.find(
+                        (log: any) => log.userId === me?.id &&
+                        (log.customExerciseName === exName || log.workoutTypeId === w.workoutTypeId)
+                      );
+                      const isLogged = !!myLog;
+
+                      return (
+                        <div key={w.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface p-3 rounded-lg border border-white/5 text-sm">
+                          <div>
+                            <span className="font-medium text-white">{exName}</span>
+                            {isLogged && (
+                              <span className={`text-xs ml-2 font-medium ${
+                                myLog.status === "APPROVED" ? "text-green-400" :
+                                myLog.status === "REJECTED" ? "text-red-400" : "text-yellow-400"
+                              }`}>
+                                ✓ {myLog.value ? `${myLog.value} completed` : "Done"} ({myLog.status})
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!isLogged ? (
+                              <>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  placeholder="How many?"
+                                  className="input-field text-xs py-1.5 px-3 w-28"
+                                  value={roundsForm[key] || ""}
+                                  onChange={(e) => setRoundsForm({ ...roundsForm, [key]: e.target.value })}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => submitSessionLog(
+                                    sess.id, w.id, exName, true,
+                                    roundsForm[key] ? Number(roundsForm[key]) : undefined
+                                  )}
+                                  disabled={!roundsForm[key]}
+                                  className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40"
+                                >
+                                  Submit ✓
+                                </button>
+                              </>
+                            ) : (
+                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                myLog.status === "APPROVED" ? "bg-green-500/20 text-green-300" :
+                                myLog.status === "REJECTED" ? "bg-red-500/20 text-red-300" :
+                                "bg-yellow-500/20 text-yellow-300"
+                              }`}>
+                                {myLog.status === "APPROVED" ? "✓ Approved" :
+                                 myLog.status === "REJECTED" ? "✗ Rejected" : "⏳ Pending"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {sess.workouts.length === 0 && <p className="text-xs text-white/30">No exercises added yet.</p>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
