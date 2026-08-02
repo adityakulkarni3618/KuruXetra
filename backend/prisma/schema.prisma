@@ -69,6 +69,7 @@ model User {
   combatHeaded      CombatSport[]   @relation("CombatSportHead")
   combatSubHeaded   CombatSubHead[]
   combatScoreLogs   CombatScoreLog[]
+  combatPlayerList  CombatPlayer[]  @relation("CombatPlayerList")
 }
 
 model Sport {
@@ -388,10 +389,12 @@ model CombatSport {
   eventId       String
   sportName     String        
   headUserId    String?       
+  pointsWeight  Int           @default(10)
   event         CombatEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   headUser      User?         @relation("CombatSportHead", fields: [headUserId], references: [id])
   matches       CombatMatch[]
   subHeads      CombatSubHead[]
+  players       CombatPlayer[]
 
   @@unique([eventId, sportName])
 }
@@ -428,4 +431,16 @@ model CombatScoreLog {
   updatedAt       DateTime      @default(now())
   match           CombatMatch   @relation(fields: [matchId], references: [id], onDelete: Cascade)
   updatedBy       User          @relation(fields: [updatedById], references: [id])
+}
+
+model CombatPlayer {
+  id              String        @id @default(cuid())
+  combatSportId   String
+  userId          String
+  department      String
+  registeredAt    DateTime      @default(now())
+  combatSport     CombatSport   @relation(fields: [combatSportId], references: [id], onDelete: Cascade)
+  user            User          @relation("CombatPlayerList", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([combatSportId, userId])
 }

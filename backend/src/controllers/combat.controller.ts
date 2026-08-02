@@ -40,10 +40,11 @@ export async function listCombatEvents(req: AuthedRequest, res: Response) {
 
 // SS Admin: Add Sport to Event and assign Sport Head by Athletic ID (uniqueId)
 export async function addCombatSport(req: AuthedRequest, res: Response) {
-  const { eventId, sportName, headUniqueId } = req.body as { 
+  const { eventId, sportName, headUniqueId, pointsWeight } = req.body as { 
     eventId: string; 
     sportName: string; 
     headUniqueId?: string;
+    pointsWeight?: number;
   };
   if (!eventId || !sportName) {
     return res.status(400).json({ error: "Event ID and Sport Name are required" });
@@ -61,7 +62,8 @@ export async function addCombatSport(req: AuthedRequest, res: Response) {
       data: {
         eventId,
         sportName,
-        headUserId
+        headUserId,
+        pointsWeight: pointsWeight ? Number(pointsWeight) : 10
       },
       include: {
         headUser: { select: { id: true, fullName: true, uniqueId: true } }
@@ -73,22 +75,33 @@ export async function addCombatSport(req: AuthedRequest, res: Response) {
   }
 }
 
-// SS Admin: Reassign Sport Head by Athletic ID (uniqueId)
+// SS Admin: Reassign Sport Head by Athletic ID (uniqueId) or update Sport settings
 export async function assignSportHead(req: AuthedRequest, res: Response) {
   const { sportId } = req.params;
-  const { headUniqueId } = req.body as { headUniqueId: string };
+  const { headUniqueId, pointsWeight } = req.body as { headUniqueId?: string; pointsWeight?: number };
   try {
-    const u = await prisma.user.findUnique({ where: { uniqueId: headUniqueId } });
-    if (!u) return res.status(404).json({ error: "Athlete Head ID not found" });
+    const updateData: any = {};
+    if (pointsWeight !== undefined) {
+      updateData.pointsWeight = Number(pointsWeight);
+    }
+    if (headUniqueId !== undefined) {
+      if (headUniqueId.trim() === "") {
+        updateData.headUserId = null;
+      } else {
+        const u = await prisma.user.findUnique({ where: { uniqueId: headUniqueId } });
+        if (!u) return res.status(404).json({ error: "Athlete Head ID not found" });
+        updateData.headUserId = u.id;
+      }
+    }
 
     const updated = await prisma.combatSport.update({
       where: { id: sportId },
-      data: { headUserId: u.id },
+      data: updateData,
       include: { headUser: { select: { id: true, fullName: true, uniqueId: true } } }
     });
     res.json(updated);
   } catch (err: any) {
-    res.status(500).json({ error: "Failed to reassign head user" });
+    res.status(500).json({ error: "Failed to update sport settings" });
   }
 }
 
@@ -274,5 +287,73 @@ export async function getMyCombatSports(req: AuthedRequest, res: Response) {
     });
   } catch (err: any) {
     res.status(500).json({ error: "Failed to load managed sports" });
+  }
+}
+
+// SS Admin: Get full roster for a sport
+export async function getSportRoster(req: AuthedRequest, res: Response) {
+  const { sportId } = req.params;
+  try {
+    const players = await prisma.combatPlayer.findMany({
+      where: { combatSportId: sportId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            uniqueId: true,
+            department: true,
+            profilePhotoUrl: true
+          }
+        }
+      },
+      orderBy: { registeredAt: "asc" }
+    });
+    res.json(players);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to fetch roster" });
+  }
+}
+
+// SS Admin: Register a player to a sport roster by uniqueId
+export async function addPlayerToRoster(req: AuthedRequest, res: Response) {
+  const { sportId } = req.params;
+  const { athleteUniqueId } = req.body as { athleteUniqueId: string };
+  if (!athleteUniqueId?.trim()) {
+    return res.status(400).json({ error: "Athlete unique ID is required" });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { uniqueId: athleteUniqueId } });
+    if (!user) return res.status(404).json({ error: "Athlete with this ID not found" });
+
+    const entry = await prisma.combatPlayer.create({
+      data: {
+        combatSportId: sportId,
+        userId: user.id,
+        department: user.department
+      },
+      include: {
+        user: { select: { id: true, fullName: true, uniqueId: true, department: true, profilePhotoUrl: true } }
+      }
+    });
+    res.status(201).json(entry);
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return res.status(409).json({ error: "This athlete is already registered in this sport" });
+    }
+    res.status(500).json({ error: "Failed to register player" });
+  }
+}
+
+// SS Admin: Remove a player from a sport roster
+export async function removePlayerFromRoster(req: AuthedRequest, res: Response) {
+  const { sportId, playerId } = req.params;
+  try {
+    await prisma.combatPlayer.delete({
+      where: { id: playerId }
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to remove player from roster" });
   }
 }
