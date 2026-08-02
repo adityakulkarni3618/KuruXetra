@@ -66,6 +66,9 @@ model User {
   badges            UserBadge[]
   statusViews       StatusView[]
   athleteSessionLogs AthleteSessionLog[]
+  combatHeaded      CombatSport[]   @relation("CombatSportHead")
+  combatSubHeaded   CombatSubHead[]
+  combatScoreLogs   CombatScoreLog[]
 }
 
 model Sport {
@@ -370,4 +373,59 @@ model StatusView {
   viewer         User         @relation(fields: [viewerId], references: [id], onDelete: Cascade)
 
   @@unique([statusUpdateId, viewerId])
+}
+
+model CombatEvent {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  sports      CombatSport[]
+}
+
+model CombatSport {
+  id            String        @id @default(cuid())
+  eventId       String
+  sportName     String        
+  headUserId    String?       
+  event         CombatEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  headUser      User?         @relation("CombatSportHead", fields: [headUserId], references: [id])
+  matches       CombatMatch[]
+  subHeads      CombatSubHead[]
+
+  @@unique([eventId, sportName])
+}
+
+model CombatSubHead {
+  id            String        @id @default(cuid())
+  combatSportId String
+  userId        String
+  combatSport   CombatSport   @relation(fields: [combatSportId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([combatSportId, userId])
+}
+
+model CombatMatch {
+  id              String        @id @default(cuid())
+  combatSportId   String
+  deptA           String        
+  deptB           String        
+  scheduledAt     DateTime
+  status          String        @default("SCHEDULED") 
+  currentScore    String        @default("Not started") 
+  winnerDept      String?       
+  combatSport     CombatSport   @relation(fields: [combatSportId], references: [id], onDelete: Cascade)
+  scoreUpdates    CombatScoreLog[]
+  createdAt       DateTime      @default(now())
+}
+
+model CombatScoreLog {
+  id              String        @id @default(cuid())
+  matchId         String
+  scoreText       String
+  updatedById     String
+  updatedAt       DateTime      @default(now())
+  match           CombatMatch   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  updatedBy       User          @relation(fields: [updatedById], references: [id])
 }

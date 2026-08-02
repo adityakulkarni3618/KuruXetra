@@ -20,10 +20,20 @@ export default function OverviewPage() {
   const [statuses, setStatuses] = useState<any[]>([]);
   const [activeStatus, setActiveStatus] = useState<any>(null);
 
+  // Combat matches live scoreboard state
+  const [combatMatches, setCombatMatches] = useState<any[]>([]);
+
   async function loadStatuses() {
     try {
       const active = await api("/api/social/status/active");
       setStatuses(active);
+    } catch {}
+  }
+
+  async function loadCombatMatches() {
+    try {
+      const scoreboards = await api("/api/combat/active-matches");
+      setCombatMatches(scoreboards || []);
     } catch {}
   }
 
@@ -33,6 +43,7 @@ export default function OverviewPage() {
     api("/api/running/me").then(setRuns).catch(() => {});
     api("/api/leaderboard").then(setLeaderboard).catch(() => {});
     loadStatuses();
+    loadCombatMatches();
     
     api("/api/auth/me")
       .then((meRes) => {
@@ -174,6 +185,85 @@ export default function OverviewPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Combat Tournament Live Cricbuzz Scoreboard ── */}
+      {combatMatches.length > 0 && (
+        <div className="stat-card mb-8 border border-gold/10">
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
+            <h2 className="font-display font-semibold text-white text-sm flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+              Combat Tournament matches
+            </h2>
+            <button onClick={loadCombatMatches} className="text-[10px] text-gold hover:underline">
+              🔄 Refresh Scores
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {combatMatches.map((match) => {
+              const isUserDeptA = user?.department && match.deptA.toLowerCase() === user.department.toLowerCase();
+              const isUserDeptB = user?.department && match.deptB.toLowerCase() === user.department.toLowerCase();
+              const isRelatedToMyDept = isUserDeptA || isUserDeptB;
+
+              return (
+                <div 
+                  key={match.id} 
+                  className={`bg-surface/50 border rounded-xl p-3 flex flex-col justify-between transition-all ${
+                    isRelatedToMyDept ? "border-red-500/30 bg-red-500/[0.02]" : "border-white/5 hover:border-white/10"
+                  }`}
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[10px] font-bold text-gold uppercase">{match.combatSport.sportName}</span>
+                      {match.status === "LIVE" ? (
+                        <span className="text-[9px] bg-red-500/10 text-red-400 font-bold px-1.5 py-0.5 rounded animate-pulse">
+                          ● LIVE
+                        </span>
+                      ) : match.status === "COMPLETED" ? (
+                        <span className="text-[9px] bg-white/10 text-white/50 px-1.5 py-0.5 rounded">
+                          COMPLETED
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">
+                          UPCOMING
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Department Alerts Banner */}
+                    {isRelatedToMyDept && user?.department && (
+                      <div className="text-[8px] font-bold text-red-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        📢 Your Department Match ({user.department.split(" ")[0]})
+                      </div>
+                    )}
+
+                    <div className="space-y-1 my-2">
+                      <div className={`flex justify-between text-xs font-semibold ${isUserDeptA ? "text-red-300 font-bold" : "text-white"}`}>
+                        <span>{match.deptA}</span>
+                        {match.winnerDept === match.deptA && <span className="text-gold text-[10px]">🏆 Winner</span>}
+                      </div>
+                      <div className="text-[10px] text-white/30 text-center font-mono py-0.5">vs</div>
+                      <div className={`flex justify-between text-xs font-semibold ${isUserDeptB ? "text-red-300 font-bold" : "text-white"}`}>
+                        <span>{match.deptB}</span>
+                        {match.winnerDept === match.deptB && <span className="text-gold text-[10px]">🏆 Winner</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-white/5">
+                    <p className="text-[11px] font-medium text-white/80 italic font-mono bg-black/20 p-1.5 rounded">
+                      {match.currentScore}
+                    </p>
+                    <span className="text-[9px] text-white/30 block mt-1.5">
+                      Date: {new Date(match.scheduledAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

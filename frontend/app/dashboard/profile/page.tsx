@@ -504,8 +504,8 @@ export default function ProfilePage() {
         </form>
       </div>
 
-      {/* ── Relocated Explore Widgets (Badges & Sports) ── */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      {/* ── Relocated Explore Widgets (Badges, Sports & Combat Match Center) ── */}
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
         {/* Explore Badges */}
         <div className="stat-card hover:border-gold/20 transition-all flex flex-col justify-between">
           <div>
@@ -525,6 +525,17 @@ export default function ProfilePage() {
           </div>
           <Link href="/dashboard/sports" className="btn-gold text-xs block text-center py-2">
             Browse Sports & Teams &rarr;
+          </Link>
+        </div>
+
+        {/* Combat Match Center Card */}
+        <div className="stat-card hover:border-gold/20 transition-all flex flex-col justify-between border border-gold/10">
+          <div>
+            <h3 className="font-semibold text-gold mb-2">Combat Match Center</h3>
+            <p className="text-xs text-white/50 mb-3">Sport Heads & Scorekeepers dashboard. Delegate scorers & schedule matches.</p>
+          </div>
+          <Link href="/dashboard/profile/combat-pannel" className="btn-gold text-xs block text-center py-2">
+            Enter Match Center &rarr;
           </Link>
         </div>
       </div>
