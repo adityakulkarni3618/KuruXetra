@@ -75,9 +75,9 @@ export default function AdminPage() {
       ),
     },
     {
-      href: "/dashboard/admin/combat",
-      title: "Combat Events",
-      desc: "Manage annual Combat tournaments, register sports, and assign Sport Heads to update scoreboard matches.",
+      href: "/dashboard/admin/events",
+      title: "Events & Tournaments",
+      desc: "Manage college inter-department events like COMBAT. Configure sports, assign Sport Heads, set points, and build player rosters.",
       icon: (
         <svg className="w-8 h-8 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.003 9.003 0 1020.945 13H18a5 5 0 01-5-5V5.055a9.003 9.003 0 00-2-2z" />

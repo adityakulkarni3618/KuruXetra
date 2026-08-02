@@ -10,7 +10,10 @@ import {
   scheduleCombatMatch,
   updateMatchScore,
   getLiveScoreboard,
-  getMyCombatSports
+  getMyCombatSports,
+  getSportRoster,
+  addPlayerToRoster,
+  removePlayerFromRoster
 } from "../controllers/combat.controller";
 
 const router = Router();
@@ -28,6 +31,11 @@ router.patch("/sports/:sportId/head", requireAuth, requireRole("SUPER_ADMIN"), a
 // Sport Heads delegation and scheduling
 router.post("/sports/:combatSportId/subheads", requireAuth, addCombatSubHead);
 router.post("/sports/:combatSportId/matches", requireAuth, scheduleCombatMatch);
+
+// Roster management (Admin only)
+router.get("/sports/:sportId/players", requireAuth, requireRole("SUPER_ADMIN"), getSportRoster);
+router.post("/sports/:sportId/players", requireAuth, requireRole("SUPER_ADMIN"), addPlayerToRoster);
+router.delete("/sports/:sportId/players/:playerId", requireAuth, requireRole("SUPER_ADMIN"), removePlayerFromRoster);
 
 // Scorekeepers logs updates
 router.patch("/matches/:id/score", requireAuth, updateMatchScore);
