@@ -15,17 +15,30 @@ export async function searchUsers(req: AuthedRequest, res: Response) {
   };
 
   try {
-    const where: any = { AND: [] };
+    let where: any = {};
 
-    if (uniqueId) where.AND.push({ uniqueId: { contains: uniqueId, mode: "insensitive" } });
-    if (name) where.AND.push({ fullName: { contains: name, mode: "insensitive" } });
-    if (rollNumber) where.AND.push({ rollNumber: { contains: rollNumber, mode: "insensitive" } });
-    if (department) where.AND.push({ department });
-    if (academicYear) where.AND.push({ academicYear });
-    if (passoutYear) where.AND.push({ passoutYear: Number(passoutYear) });
-    if (role) where.AND.push({ role });
-
-    if (where.AND.length === 0) delete where.AND;
+    if (uniqueId && name && uniqueId === name) {
+      // General broad query
+      where = {
+        OR: [
+          { uniqueId: { contains: uniqueId, mode: "insensitive" } },
+          { fullName: { contains: name, mode: "insensitive" } },
+          { department: { contains: department, mode: "insensitive" } },
+        ],
+      };
+    } else {
+      const andClauses: any[] = [];
+      if (uniqueId) andClauses.push({ uniqueId: { contains: uniqueId, mode: "insensitive" } });
+      if (name) andClauses.push({ fullName: { contains: name, mode: "insensitive" } });
+      if (rollNumber) andClauses.push({ rollNumber: { contains: rollNumber, mode: "insensitive" } });
+      if (department) andClauses.push({ department });
+      if (academicYear) andClauses.push({ academicYear });
+      if (passoutYear) andClauses.push({ passoutYear: Number(passoutYear) });
+      if (role) andClauses.push({ role });
+      if (andClauses.length > 0) {
+        where.AND = andClauses;
+      }
+    }
 
     const users = await prisma.user.findMany({
       where,
