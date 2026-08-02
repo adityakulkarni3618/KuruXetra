@@ -185,22 +185,26 @@ export default function SportsPage() {
               {otherSports.map((s) => {
                 const joined = myMembershipIds.has(s.id);
                 return (
-                  <div key={s.id} className="stat-card hover:border-white/10 transition-all opacity-85">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-display font-semibold text-white">{s.teamName || s.name}</h3>
-                        {s.teamName && <p className="text-xs text-white/40 mt-0.5">{s.name}</p>}
+                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 cursor-pointer flex flex-col justify-between" onClick={() => openSportDetail(s)}>
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-display font-semibold text-white">{s.teamName || s.name}</h3>
+                          {s.teamName && <p className="text-xs text-white/40 mt-0.5">{s.name}</p>}
+                        </div>
+                        {s.captain && <span className="text-xs text-white/40">Captain: {s.captain.fullName}</span>}
                       </div>
-                      {s.captain && <span className="text-xs text-white/40">Captain: {s.captain.fullName}</span>}
+                      {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
                     </div>
-                    {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
-                    <button
-                      onClick={() => join(s.id)}
-                      disabled={joined}
-                      className="btn-primary text-xs mt-4 disabled:opacity-40"
-                    >
-                      {joined ? "Join Requested" : "Request to join"}
-                    </button>
+                    <div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); join(s.id); }}
+                        disabled={joined}
+                        className="btn-primary text-xs mt-4 disabled:opacity-40 w-full md:w-auto"
+                      >
+                        {joined ? "Join Requested" : "Request to join"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
