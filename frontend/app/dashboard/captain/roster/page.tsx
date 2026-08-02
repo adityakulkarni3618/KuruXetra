@@ -137,9 +137,22 @@ export default function CaptainRosterPage() {
       <div className="space-y-2 mb-8">
         {pending.map((m) => (
           <div key={m.id} className="stat-card flex justify-between items-center">
-            <div>
-              <p className="font-medium text-white">{m.user.fullName} <span className="text-white/30 text-xs">({m.user.uniqueId})</span></p>
-              <p className="text-xs text-white/40">{m.user.department} · Roll No: {m.user.rollNumber}</p>
+            <div className="flex items-center gap-4">
+              {m.user.profilePhotoUrl ? (
+                <img
+                  src={m.user.profilePhotoUrl}
+                  alt={m.user.fullName}
+                  className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-surface-light border border-dashed border-white/10 flex items-center justify-center text-white/20 shrink-0 text-xs">
+                  No pic
+                </div>
+              )}
+              <div>
+                <p className="font-medium text-white">{m.user.fullName} <span className="text-white/30 text-xs">({m.user.uniqueId})</span></p>
+                <p className="text-xs text-white/40">{m.user.department} · Roll No: {m.user.rollNumber}</p>
+              </div>
             </div>
             <div className="flex gap-2">
               <button onClick={() => review(m.id, "APPROVED")} className="btn-gold text-xs px-3 py-1.5">Approve</button>
@@ -154,9 +167,22 @@ export default function CaptainRosterPage() {
       <div className="space-y-3">
         {approved.map((m) => (
           <div key={m.id} className="stat-card flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className="font-medium text-white">{m.user.fullName} <span className="text-white/30 text-xs">({m.user.uniqueId})</span></p>
-              <p className="text-xs text-white/40">{m.user.department} · Roll No: {m.user.rollNumber} · {m.user.email}</p>
+            <div className="flex items-center gap-4">
+              {m.user.profilePhotoUrl ? (
+                <img
+                  src={m.user.profilePhotoUrl}
+                  alt={m.user.fullName}
+                  className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-surface-light border border-dashed border-white/10 flex items-center justify-center text-white/20 shrink-0 text-xs">
+                  No pic
+                </div>
+              )}
+              <div>
+                <p className="font-medium text-white">{m.user.fullName} <span className="text-white/30 text-xs">({m.user.uniqueId})</span></p>
+                <p className="text-xs text-white/40">{m.user.department} · Roll No: {m.user.rollNumber} · {m.user.email}</p>
+              </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => awardBadge(m.user.id, "MVP")} className="btn-primary bg-purple-600 hover:bg-purple-500 text-xs px-3 py-1.5">Award MVP</button>
