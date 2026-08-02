@@ -18,6 +18,7 @@ import {
   deleteAnnouncement,
   deleteSession,
   endSession,
+  endMeeting,
   reviewSessionLogs,
 } from "../controllers/admin-features.controller";
 
@@ -42,6 +43,7 @@ router.post("/sessions/:sessionId/logs", requireAuth, logSessionWorkout);
 router.post("/sessions/:id/add-exercise", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), addExerciseToSession);
 router.delete("/sessions/:id", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), deleteSession);
 router.post("/sessions/:id/end", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), endSession);
+router.post("/meetings/:id/end", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), endMeeting);
 router.post("/sessions/:sessionId/review-logs", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), reviewSessionLogs);
 
 export default router;

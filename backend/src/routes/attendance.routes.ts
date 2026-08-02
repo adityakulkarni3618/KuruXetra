@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { requireAuth, requireActive } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
-import { checkIn, checkOut, markAttendance, myAttendance, sportAttendance } from "../controllers/attendance.controller";
+import { checkIn, checkOut, markAttendance, batchMarkAttendance, myAttendance, sportAttendance } from "../controllers/attendance.controller";
 
 const router = Router();
 router.post("/checkin", requireAuth, requireActive, checkIn);
 router.post("/checkout", requireAuth, requireActive, checkOut);
 router.post("/mark", requireAuth, requireActive, requireRole("SUPER_ADMIN", "CAPTAIN"), markAttendance);
+router.post("/batch-mark", requireAuth, requireActive, requireRole("SUPER_ADMIN", "CAPTAIN"), batchMarkAttendance);
 router.get("/me", requireAuth, myAttendance);
 router.get("/sport/:sportId", requireAuth, requireRole("SUPER_ADMIN", "CAPTAIN"), sportAttendance);
 

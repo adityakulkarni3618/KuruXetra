@@ -65,12 +65,83 @@ export async function markAttendance(req: AuthedRequest, res: Response) {
     }
   }
 
+  // Enforce no past/future attendance: checkIn/mark must be for the current day/time.
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23,59,59,999);
+
+  // Check if user already has attendance marked for today
+  const existingToday = await prisma.attendance.findFirst({
+    where: {
+      userId,
+      sportId,
+      timeIn: {
+        gte: todayStart,
+        lte: todayEnd,
+      }
+    }
+  });
+
+  if (existingToday) {
+    return res.status(400).json({ error: "Attendance already marked for this user today." });
+  }
+
   const entry = await prisma.attendance.create({
     data: { userId, sportId, ground, timeIn: new Date(), markedBy: req.user!.id },
   });
   await awardPoints(userId, POINTS.ATTENDANCE, "ATTENDANCE", entry.id);
   await checkAndAwardBadges(userId);
   res.status(201).json(entry);
+}
+
+export async function batchMarkAttendance(req: AuthedRequest, res: Response) {
+  const { userIds, sportId, ground } = req.body as { userIds: string[]; sportId: string; ground?: string };
+
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    return res.status(400).json({ error: "No athletes selected." });
+  }
+
+  if (req.user!.role === "CAPTAIN") {
+    const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+    if (!sport || sport.captainId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only mark attendance for your own sport" });
+    }
+  }
+
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23,59,59,999);
+
+  const results: any[] = [];
+  const errors: string[] = [];
+
+  for (const userId of userIds) {
+    try {
+      const existingToday = await prisma.attendance.findFirst({
+        where: {
+          userId,
+          sportId,
+          timeIn: { gte: todayStart, lte: todayEnd }
+        }
+      });
+      if (existingToday) {
+        errors.push(`Attendance already marked for user ${userId} today.`);
+        continue;
+      }
+      const entry = await prisma.attendance.create({
+        data: { userId, sportId, ground, timeIn: new Date(), markedBy: req.user!.id }
+      });
+      await awardPoints(userId, POINTS.ATTENDANCE, "ATTENDANCE", entry.id);
+      await checkAndAwardBadges(userId);
+      results.push(entry);
+    } catch (err: any) {
+      errors.push(`Failed to mark user ${userId}: ${err.message}`);
+    }
+  }
+
+  res.status(200).json({ success: true, markedCount: results.length, errors });
 }
 
 export async function myAttendance(req: AuthedRequest, res: Response) {

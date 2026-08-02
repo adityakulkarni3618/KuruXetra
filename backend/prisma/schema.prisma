@@ -153,6 +153,7 @@ model TeamMeeting {
   title       String
   description String?
   scheduledAt DateTime
+  status      String         @default("ACTIVE")
   createdAt   DateTime       @default(now())
   scores      MeetingScore[]
   author      User           @relation("UserScheduledMeetings", fields: [scheduledBy], references: [id])
