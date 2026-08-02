@@ -237,14 +237,19 @@ export default function SportsPage() {
               return (
                 <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-95 flex flex-col justify-between">
                   <div>
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-1">
                       <div>
-                        <h3 className="font-display font-semibold text-white">{s.teamName || s.name}</h3>
+                        <h3 className="font-display font-semibold text-white text-lg leading-tight">{s.teamName || s.name}</h3>
                         {s.teamName && <p className="text-xs text-white/40 mt-0.5">{s.name}</p>}
                       </div>
-                      {s.captain && <span className="text-xs text-white/40">Captain: {s.captain.fullName}</span>}
+                      {s.captain && (
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-white/40 font-medium">Captain:</span>
+                          <span className="text-xs text-gold font-semibold break-words leading-relaxed">{s.captain.fullName}</span>
+                        </div>
+                      )}
                     </div>
-                    {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
+                    {s.description && <p className="text-xs text-white/50 mt-3 line-clamp-3">{s.description}</p>}
                   </div>
                   <div className="flex gap-2 mt-6 flex-wrap">
                     <button
