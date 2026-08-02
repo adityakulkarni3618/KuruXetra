@@ -16,11 +16,23 @@ export default function OverviewPage() {
   const [feedItems, setFeedItems] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
+  // Status updates states
+  const [statuses, setStatuses] = useState<any[]>([]);
+  const [activeStatus, setActiveStatus] = useState<any>(null);
+
+  async function loadStatuses() {
+    try {
+      const active = await api("/api/social/status/active");
+      setStatuses(active);
+    } catch {}
+  }
+
   useEffect(() => {
     api("/api/attendance/me").then(setAttendance).catch(() => {});
     api("/api/workouts/me").then(setWorkouts).catch(() => {});
     api("/api/running/me").then(setRuns).catch(() => {});
     api("/api/leaderboard").then(setLeaderboard).catch(() => {});
+    loadStatuses();
     
     api("/api/auth/me")
       .then((meRes) => {
@@ -74,6 +86,97 @@ export default function OverviewPage() {
     <div>
       <h1 className="font-display text-2xl font-bold mb-1">Welcome back, {user?.fullName?.split(" ")[0]}</h1>
       <p className="text-white/50 text-sm mb-8">Here's where you stand today.</p>
+
+      {/* ── Statuses / Stories Bar (WhatsApp style) ── */}
+      <div className="stat-card mb-8">
+        <h2 className="font-display font-semibold text-white mb-3 text-sm flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          Status Updates (24h)
+        </h2>
+        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide items-center">
+          {statuses.map((item, idx) => {
+            const hasViewed = item.views?.some((v: any) => v.viewerId === user?.id);
+            return (
+              <div
+                key={idx}
+                onClick={async () => {
+                  setActiveStatus(item);
+                  try {
+                    await api(`/api/social/status/${item.id}/view`, { method: "POST" });
+                    loadStatuses();
+                  } catch {}
+                }}
+                className="flex flex-col items-center shrink-0 cursor-pointer text-center group"
+              >
+                <div className={`w-10 h-10 rounded-full border-2 p-0.5 group-hover:scale-105 transition-transform ${
+                  hasViewed ? "border-white/10" : "border-green-500"
+                }`}>
+                  {item.user.profilePhotoUrl ? (
+                    <img src={item.user.profilePhotoUrl} className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-[10px] text-white/40">
+                      {item.user.fullName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[10px] text-white/60 truncate max-w-[60px] mt-1">{item.user.fullName.split(" ")[0]}</span>
+                {item.caption && <span className="text-[8px] text-gold/80 italic max-w-[60px] truncate font-medium">"{item.caption}"</span>}
+              </div>
+            );
+          })}
+          {statuses.length === 0 && (
+            <span className="text-xs text-white/30 italic pl-2">No active statuses from teammates.</span>
+          )}
+        </div>
+      </div>
+
+      {/* Status Detail Modal */}
+      {activeStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setActiveStatus(null)}>
+          <div className="bg-surface border border-white/10 rounded-xl p-6 w-full max-w-sm text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="absolute top-3 right-3 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-full border border-white/5 transition-all text-xs font-bold leading-none w-6 h-6 flex items-center justify-center" 
+              onClick={() => setActiveStatus(null)}
+            >
+              ✕
+            </button>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gold">
+                <img src={activeStatus.user.profilePhotoUrl || ""} alt="" className="w-full h-full object-cover" />
+              </div>
+              <h3 className="font-bold">{activeStatus.user.fullName}</h3>
+              {activeStatus.mediaUrl && (
+                activeStatus.mediaUrl.match(/\.(mp4|webm|ogg|mov|m4v)($|\?)/i) || activeStatus.mediaUrl.includes("/video/upload/") ? (
+                  <video 
+                    src={activeStatus.mediaUrl} 
+                    controls 
+                    autoPlay
+                    playsInline
+                    className="w-full max-h-60 rounded-lg my-2 object-contain bg-black"
+                  />
+                ) : (
+                  <img src={activeStatus.mediaUrl} className="w-full max-h-60 rounded-lg my-2 object-contain bg-black" />
+                )
+              )}
+              <p className="text-sm italic text-white/70">"{activeStatus.caption}"</p>
+              
+              <div className="w-full border-t border-white/5 mt-4 pt-4 text-left">
+                <div className="text-[10px] text-white/30 mb-2">👁️ Viewed by {activeStatus.views?.length || 0} people</div>
+                {activeStatus.userId === user?.id && activeStatus.views?.length > 0 && (
+                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                    {activeStatus.views.map((v: any) => (
+                      <div key={v.id} className="flex justify-between items-center bg-surface-light/50 p-1.5 rounded border border-white/5 text-[10px]">
+                        <span className="font-semibold text-white">{v.viewer.fullName}</span>
+                        <span className="text-white/40 font-mono">({v.viewer.uniqueId})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Grid Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
