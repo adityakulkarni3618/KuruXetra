@@ -201,50 +201,76 @@ export default function SportsPage() {
             )}
           </div>
 
-          {/* Explore More Sports Section */}
-          <div>
+          {/* Explore More Sports Section Card Trigger */}
+          <div className="mt-8">
             <h2 className="font-display font-semibold text-lg text-white mb-4">Explore More Sports</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {otherSports.map((s) => {
-                const joined = myMembershipIds.has(s.id);
-                return (
-                  <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-85 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-display font-semibold text-white">{s.teamName || s.name}</h3>
-                          {s.teamName && <p className="text-xs text-white/40 mt-0.5">{s.name}</p>}
-                        </div>
-                        {s.captain && <span className="text-xs text-white/40">Captain: {s.captain.fullName}</span>}
-                      </div>
-                      {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
-                    </div>
-                    <div className="flex gap-2 mt-4 flex-wrap">
-                      <button
-                        onClick={() => openExploreDetail(s)}
-                        className="btn-gold text-xs px-3 py-1.5 flex-1 justify-center"
-                      >
-                        Explore Sport
-                      </button>
-                      <button
-                        onClick={() => join(s.id)}
-                        disabled={joined}
-                        className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40 flex-1 justify-center"
-                      >
-                        {joined ? "Join Requested" : "Request to join"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              {otherSports.length === 0 && (
-                <div className="col-span-full text-white/40 text-center py-6 text-sm">
-                  No other sports available to join.
-                </div>
-              )}
+            <div className="stat-card border border-gold/15 bg-gold/5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-gold/30 transition-all">
+              <div>
+                <h3 className="font-display font-semibold text-white text-lg">Browse & Request to Join Other Sports</h3>
+                <p className="text-xs text-white/50 mt-1">Explore all other available college sports teams, view locations, schedules, and send join requests.</p>
+              </div>
+              <button
+                onClick={() => setExploreSport({ id: "all_list" })}
+                className="btn-gold text-xs px-6 py-3 shrink-0"
+              >
+                Explore Other Sports &rarr;
+              </button>
             </div>
           </div>
         </>
+      ) : exploreSport && exploreSport.id === "all_list" ? (
+        // ── Explore Sports Grid List Sub-Page ──
+        <div>
+          <div className="mb-6">
+            <button onClick={() => { setExploreSport(null); setExploreDetail(null); }} className="btn-back">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              Back to Sports & Teams
+            </button>
+          </div>
+
+          <h2 className="font-display font-bold text-2xl text-white mb-2">Explore Other Sports</h2>
+          <p className="text-white/50 text-sm mb-6">Find and explore college sports you haven't joined yet.</p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {otherSports.map((s) => {
+              const joined = myMembershipIds.has(s.id);
+              return (
+                <div key={s.id} className="stat-card border border-white/5 hover:border-gold/15 transition-all opacity-95 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-display font-semibold text-white">{s.teamName || s.name}</h3>
+                        {s.teamName && <p className="text-xs text-white/40 mt-0.5">{s.name}</p>}
+                      </div>
+                      {s.captain && <span className="text-xs text-white/40">Captain: {s.captain.fullName}</span>}
+                    </div>
+                    {s.description && <p className="text-sm text-white/50 mt-2">{s.description}</p>}
+                  </div>
+                  <div className="flex gap-2 mt-6 flex-wrap">
+                    <button
+                      onClick={() => openExploreDetail(s)}
+                      className="btn-gold text-xs px-3 py-1.5 flex-1 justify-center"
+                    >
+                      Explore Sport
+                    </button>
+                    <button
+                      onClick={() => join(s.id)}
+                      disabled={joined}
+                      className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40 flex-1 justify-center"
+                    >
+                      {joined ? "Join Requested" : "Request to join"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {otherSports.length === 0 && (
+              <div className="col-span-full text-white/40 text-center py-6 text-sm">
+                No other sports available to join.
+              </div>
+            )}
+          </div>
+        </div>
       ) : exploreSport ? (
         // ── Explore Sport Detail Page ─────────────────────────────────────────
         <div>
