@@ -455,7 +455,7 @@ export default function LeaderboardPage() {
                   <div className="bg-surface/50 border border-white/5 p-4 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
                       <h4 className="font-semibold text-white text-sm">Workout History ({profileWorkouts.length})</h4>
-                      {(selectedProfile.id === user?.id || user?.role === "SUPER_ADMIN") && (
+                      {selectedProfile.id === user?.id && (
                         <div className="flex gap-1.5">
                           <button
                             onClick={async () => {
@@ -551,7 +551,7 @@ export default function LeaderboardPage() {
                   <div className="bg-surface/50 border border-white/5 p-4 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
                       <h4 className="font-semibold text-white text-sm">Running History ({profileRuns.length})</h4>
-                      {(selectedProfile.id === user?.id || user?.role === "SUPER_ADMIN") && (
+                      {selectedProfile.id === user?.id && (
                         <div className="flex gap-1.5">
                           <button
                             onClick={async () => {
