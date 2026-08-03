@@ -291,13 +291,13 @@ export default function CaptainAttendancePage() {
             <button
               onClick={async () => {
                 const choice = confirm(
-                  "Clear attendance globally (entire sport roster)?\n\nClick OK for Global clear.\nClick Cancel for your account only."
+                  `CLEAR ATTENDANCE\n\nChoose scope:\n\n✅ Click OK → Clear for ALL athletes in ${mySport?.name} roster (global for this sport only)\n❌ Click Cancel → Clear from your personal account only`
                 );
                 if (choice) {
-                  if (!confirm(`This will hide ALL ${mySport?.name} attendance from the roster panel. Are you sure?`)) return;
+                  if (!confirm(`This will hide ALL ${mySport?.name} attendance records from the roster panel. Only affects ${mySport?.name} — no other sports. Continue?`)) return;
                   await api(`/api/attendance/sport/${mySport?.id}/clear`, { method: "POST" });
                 } else {
-                  if (!confirm("Clear attendance from your account only?")) return;
+                  if (!confirm("Clear attendance from your personal account only?")) return;
                   await api("/api/attendance/clear", { method: "POST" });
                 }
                 setMessage("Attendance cleared.");
@@ -310,7 +310,7 @@ export default function CaptainAttendancePage() {
             <button
               onClick={async () => {
                 const choice = confirm(
-                  "Restore attendance globally (entire sport roster)?\n\nClick OK for Global restore.\nClick Cancel for your account only."
+                  `RESTORE ATTENDANCE\n\nChoose scope:\n\n✅ Click OK → Restore for ALL athletes in ${mySport?.name} roster (global for this sport only)\n❌ Click Cancel → Restore your personal account only`
                 );
                 if (choice) {
                   await api(`/api/attendance/sport/${mySport?.id}/restore`, { method: "POST" });
