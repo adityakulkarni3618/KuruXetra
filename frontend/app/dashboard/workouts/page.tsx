@@ -417,46 +417,79 @@ export default function WorkoutsPage() {
       )}
 
       {/* ── Ended Sessions (recent) ── */}
-      {endedSessions.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-display font-semibold mb-3 text-white/60">Past Sessions</h2>
-          <div className="space-y-3">
-            {endedSessions.slice(0, 5).map((sess) => {
-              const myLogs = sess.athleteLogs?.filter((l: any) => l.userId === me?.id && !l.isCleared) || [];
-              return (
-                <div key={sess.id} className="stat-card border border-white/5 opacity-70">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <span className="font-medium text-white text-sm">{sess.title}</span>
-                      <span className="text-[10px] ml-2 px-2 py-0.5 rounded bg-white/10 text-white/40 font-bold uppercase">Ended</span>
-                    </div>
-                    <span className="text-xs text-white/30">{sess.sport?.name} · {new Date(sess.startTime).toLocaleDateString()}</span>
-                  </div>
-                  {sess.workouts.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {sess.workouts.map((w: any) => {
-                        const exName = w.customName || w.workoutType?.name || "Exercise";
-                        const myLog = myLogs.find((l: any) =>
-                          l.customExerciseName === exName || l.workoutTypeId === w.workoutTypeId
-                        );
-                        return (
-                          <span key={w.id} className={`text-[11px] px-2.5 py-1 rounded-full border ${
-                            myLog ? (myLog.status === "APPROVED" ? "border-green-500/30 bg-green-500/10 text-green-300" :
-                              "border-yellow-500/30 bg-yellow-500/10 text-yellow-300") :
-                            "border-red-500/20 bg-red-500/10 text-red-400"
-                          }`}>
-                            {exName} {myLog ? "✓" : "✗ Absent"}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="font-display font-semibold text-white/60">Past Sessions</h2>
+            <p className="text-xs text-white/40">Log of completed team training sessions and your attendance.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to clear your past sessions history?")) return;
+                await api("/api/workouts/sessions/clear", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all font-medium"
+            >
+              Clear Past Sessions
+            </button>
+            <button
+              onClick={async () => {
+                await api("/api/workouts/sessions/restore", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all font-medium"
+            >
+              Restore Past Sessions
+            </button>
+            <button
+              onClick={downloadSessionsPdf}
+              className="btn-gold text-xs px-3 py-1.5 font-semibold"
+            >
+              Download Sessions PDF
+            </button>
           </div>
         </div>
-      )}
+        <div className="space-y-3">
+          {endedSessions.slice(0, 5).map((sess) => {
+            const myLogs = sess.athleteLogs?.filter((l: any) => l.userId === me?.id && !l.isCleared) || [];
+            return (
+              <div key={sess.id} className="stat-card border border-white/5 opacity-70">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <span className="font-medium text-white text-sm">{sess.title}</span>
+                    <span className="text-[10px] ml-2 px-2 py-0.5 rounded bg-white/10 text-white/40 font-bold uppercase">Ended</span>
+                  </div>
+                  <span className="text-xs text-white/30">{sess.sport?.name} · {new Date(sess.startTime).toLocaleDateString()}</span>
+                </div>
+                {sess.workouts.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {sess.workouts.map((w: any) => {
+                      const exName = w.customName || w.workoutType?.name || "Exercise";
+                      const myLog = myLogs.find((l: any) =>
+                        l.customExerciseName === exName || l.workoutTypeId === w.workoutTypeId
+                      );
+                      return (
+                        <span key={w.id} className={`text-[11px] px-2.5 py-1 rounded-full border ${
+                          myLog ? (myLog.status === "APPROVED" ? "border-green-500/30 bg-green-500/10 text-green-300" :
+                            "border-yellow-500/30 bg-yellow-500/10 text-yellow-300") :
+                          "border-red-500/20 bg-red-500/10 text-red-400"
+                        }`}>
+                          {exName} {myLog ? "✓" : "✗ Absent"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {endedSessions.length === 0 && (
+            <p className="text-sm text-white/40 italic">No past sessions.</p>
+          )}
+        </div>
+      </div>
 
       {/* ── Personal Workout History ── */}
       <div className="stat-card mb-6 border border-white/5 space-y-4">
@@ -488,34 +521,6 @@ export default function WorkoutsPage() {
           </div>
         </div>
 
-        <div className="border-t border-white/5 pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-semibold text-white text-xs">Past Team Sessions Controls</h3>
-            <p className="text-[10px] text-white/50">Clear or restore logs from scheduled sport training sessions.</p>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <button
-              onClick={async () => {
-                if (!confirm("Are you sure you want to clear your past sessions history?")) return;
-                await api("/api/workouts/sessions/clear", { method: "POST" });
-                await load();
-              }}
-              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
-            >
-              Clear Past Sessions
-            </button>
-            <button
-              onClick={async () => {
-                await api("/api/workouts/sessions/restore", { method: "POST" });
-                await load();
-              }}
-              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
-            >
-              Restore Past Sessions
-            </button>
-          </div>
-        </div>
-
         <div className="border-t border-white/5 pt-4 flex flex-col sm:flex-row items-end gap-3">
           <label className="block flex-1">
             <span className="label text-[10px] text-white/40 mb-1">Start Date</span>
@@ -525,20 +530,12 @@ export default function WorkoutsPage() {
             <span className="label text-[10px] text-white/40 mb-1">End Date</span>
             <input type="date" className="input-field text-xs py-1.5" value={pdfEnd} onChange={(e) => setPdfEnd(e.target.value)} />
           </label>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button
-              onClick={downloadPdf}
-              className="btn-gold text-xs px-3 py-2 flex-1 sm:flex-none"
-            >
-              Download Workouts PDF
-            </button>
-            <button
-              onClick={downloadSessionsPdf}
-              className="btn-gold text-xs px-3 py-2 flex-1 sm:flex-none"
-            >
-              Download Sessions PDF
-            </button>
-          </div>
+          <button
+            onClick={downloadPdf}
+            className="btn-gold text-xs px-4 py-2 w-full sm:w-auto"
+          >
+            Download Workouts PDF
+          </button>
         </div>
       </div>
 
