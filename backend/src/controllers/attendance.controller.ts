@@ -174,11 +174,35 @@ export async function batchMarkAttendance(req: AuthedRequest, res: Response) {
 export async function myAttendance(req: AuthedRequest, res: Response) {
   await autoCheckoutPendingEntries(req.user!.id);
   const records = await prisma.attendance.findMany({
-    where: { userId: req.user!.id },
+    where: { userId: req.user!.id, isCleared: false },
     orderBy: { timeIn: "desc" },
     take: 100,
   });
   res.json(records);
+}
+
+export async function clearAttendance(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.attendance.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: true },
+    });
+    res.json({ message: "Attendance history cleared successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to clear attendance history" });
+  }
+}
+
+export async function restoreAttendance(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.attendance.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: false },
+    });
+    res.json({ message: "Attendance history restored successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to restore attendance history" });
+  }
 }
 
 export async function sportAttendance(req: AuthedRequest, res: Response) {

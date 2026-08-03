@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { printReport } from "@/lib/export";
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<any[]>([]);
@@ -9,6 +10,31 @@ export default function AttendancePage() {
   const [sportId, setSportId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pdfStart, setPdfStart] = useState("");
+  const [pdfEnd, setPdfEnd] = useState("");
+
+  const downloadPdf = () => {
+    let filtered = records;
+    if (pdfStart) {
+      const start = new Date(pdfStart).getTime();
+      filtered = filtered.filter(r => new Date(r.timeIn).getTime() >= start);
+    }
+    if (pdfEnd) {
+      const end = new Date(pdfEnd);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(r => new Date(r.timeIn).getTime() <= end.getTime());
+    }
+
+    const headers = ["Date", "Time In", "Time Out", "Duration"];
+    const rows = filtered.map(r => [
+      new Date(r.timeIn).toLocaleDateString(),
+      new Date(r.timeIn).toLocaleTimeString(),
+      r.timeOut ? new Date(r.timeOut).toLocaleTimeString() : "—",
+      r.durationMin ? `${r.durationMin} min` : "—"
+    ]);
+
+    printReport(`Attendance History Report`, headers, rows);
+  };
 
   async function load() {
     const [a, me] = await Promise.all([api("/api/attendance/me"), api("/api/auth/me")]);
@@ -90,6 +116,53 @@ export default function AttendancePage() {
             </button>
           </>
         )}
+      </div>
+
+      <div className="stat-card mb-6 border border-white/5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-white">History Controls</h3>
+            <p className="text-xs text-white/50">Clear, restore or export your attendance logs.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to clear your attendance history?")) return;
+                await api("/api/attendance/clear", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
+            >
+              Clear Attendance
+            </button>
+            <button
+              onClick={async () => {
+                await api("/api/attendance/restore", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
+            >
+              Restore Attendance
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 pt-4 flex flex-col sm:flex-row items-end gap-3">
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">Start Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfStart} onChange={(e) => setPdfStart(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">End Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfEnd} onChange={(e) => setPdfEnd(e.target.value)} />
+          </label>
+          <button
+            onClick={downloadPdf}
+            className="btn-gold text-xs px-4 py-2 w-full sm:w-auto"
+          >
+            Download Attendance PDF
+          </button>
+        </div>
       </div>
 
       <h2 className="font-display font-semibold mb-3">History</h2>
