@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { printReport } from "@/lib/export";
 
 interface Post {
   id: string;
@@ -60,8 +61,15 @@ export default function LeaderboardPage() {
   // Profile detail modal/view state
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [profilePosts, setProfilePosts] = useState<Post[]>([]);
+  const [profileWorkouts, setProfileWorkouts] = useState<any[]>([]);
+  const [profileRuns, setProfileRuns] = useState<any[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [error, setError] = useState("");
+
+  const [profileWorkoutStart, setProfileWorkoutStart] = useState("");
+  const [profileWorkoutEnd, setProfileWorkoutEnd] = useState("");
+  const [profileRunStart, setProfileRunStart] = useState("");
+  const [profileRunEnd, setProfileRunEnd] = useState("");
 
   // Social actions inside profile view
   const [newPostContent, setNewPostContent] = useState("");
@@ -113,13 +121,21 @@ export default function LeaderboardPage() {
     setLoadingProfile(true);
     setSelectedProfile(null);
     setProfilePosts([]);
+    setProfileWorkouts([]);
+    setProfileRuns([]);
     setError("");
     try {
       const profile = await api(`/api/social/users/${userId}/profile`);
       setSelectedProfile(profile);
       if (profile.isFullProfile) {
-        const posts = await api(`/api/social/users/${userId}/posts`);
+        const [posts, workouts, runs] = await Promise.all([
+          api(`/api/social/users/${userId}/posts`).catch(() => []),
+          api(`/api/workouts/user/${userId}`).catch(() => []),
+          api(`/api/running/user/${userId}`).catch(() => []),
+        ]);
         setProfilePosts(posts);
+        setProfileWorkouts(workouts);
+        setProfileRuns(runs);
       }
     } catch (err: any) {
       setError(err.message);
@@ -430,6 +446,194 @@ export default function LeaderboardPage() {
                     <p className="text-white/30 font-semibold mb-0.5">Personal & Fitness</p>
                     <p className="text-white">Goal: {selectedProfile.fitnessGoal || "—"}</p>
                     <p className="text-white/50 mt-0.5">Blood Group: {selectedProfile.bloodGroup || "—"}</p>
+                  </div>
+                </div>
+
+                {/* Workout and Running sections */}
+                <div className="grid md:grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                  {/* Workouts History Section */}
+                  <div className="bg-surface/50 border border-white/5 p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-semibold text-white text-sm">Workout History ({profileWorkouts.length})</h4>
+                      {(selectedProfile.id === user?.id || user?.role === "SUPER_ADMIN") && (
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to clear workout history?")) return;
+                              await api("/api/workouts/clear", { method: "POST" });
+                              const w = await api(`/api/workouts/user/${selectedProfile.id}`).catch(() => []);
+                              setProfileWorkouts(w);
+                            }}
+                            className="text-[9px] px-2 py-0.5 bg-red-600/20 text-red-300 border border-red-500/20 rounded"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await api("/api/workouts/restore", { method: "POST" });
+                              const w = await api(`/api/workouts/user/${selectedProfile.id}`).catch(() => []);
+                              setProfileWorkouts(w);
+                            }}
+                            className="text-[9px] px-2 py-0.5 bg-green-600/20 text-green-300 border border-green-500/20 rounded"
+                          >
+                            Restore
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Date filter & PDF export */}
+                    <div className="flex flex-col gap-1 bg-black/20 p-2 rounded text-[10px]">
+                      <div className="flex gap-2">
+                        <label className="block flex-1">
+                          <span className="text-white/40 block mb-0.5">Start</span>
+                          <input type="date" className="input-field text-[10px] py-0.5" value={profileWorkoutStart} onChange={(e) => setProfileWorkoutStart(e.target.value)} />
+                        </label>
+                        <label className="block flex-1">
+                          <span className="text-white/40 block mb-0.5">End</span>
+                          <input type="date" className="input-field text-[10px] py-0.5" value={profileWorkoutEnd} onChange={(e) => setProfileWorkoutEnd(e.target.value)} />
+                        </label>
+                      </div>
+                      <button
+                        onClick={() => {
+                          let filtered = profileWorkouts;
+                          if (profileWorkoutStart) {
+                            const start = new Date(profileWorkoutStart).getTime();
+                            filtered = filtered.filter(w => new Date(w.createdAt).getTime() >= start);
+                          }
+                          if (profileWorkoutEnd) {
+                            const end = new Date(profileWorkoutEnd);
+                            end.setHours(23, 59, 59, 999);
+                            filtered = filtered.filter(w => new Date(w.createdAt).getTime() <= end.getTime());
+                          }
+                          const headers = ["Workout / Exercise", "Sets", "Reps", "Weight (kg)", "Duration (min)", "Calories", "Date", "Notes"];
+                          const rows = filtered.map(w => [
+                            w.name,
+                            w.sets || "—",
+                            w.reps || "—",
+                            w.weightKg || "—",
+                            w.durationMin || "—",
+                            w.calories || "—",
+                            new Date(w.createdAt).toLocaleDateString(),
+                            w.notes || "—"
+                          ]);
+                          printReport(`${selectedProfile.fullName}'s Workout History Report`, headers, rows);
+                        }}
+                        className="btn-gold w-full text-[10px] py-1 mt-1"
+                      >
+                        Download PDF
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                      {profileWorkouts.map((w) => (
+                        <div key={w.id} className="p-2 bg-surface rounded border border-white/5 text-[11px]">
+                          <div className="flex justify-between font-medium">
+                            <span className="text-white">{w.name}</span>
+                            <span className="text-white/40 text-[9px]">{new Date(w.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-[10px] text-white/50 mt-0.5">
+                            {[
+                              w.exercise,
+                              w.sets && `${w.sets} sets`,
+                              w.reps && `${w.reps} reps`,
+                              w.weightKg && `${w.weightKg} kg`,
+                              w.durationMin && `${w.durationMin} min`,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                      ))}
+                      {profileWorkouts.length === 0 && <p className="text-[10px] text-white/40 italic">No workouts logged.</p>}
+                    </div>
+                  </div>
+
+                  {/* Running History Section */}
+                  <div className="bg-surface/50 border border-white/5 p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-semibold text-white text-sm">Running History ({profileRuns.length})</h4>
+                      {(selectedProfile.id === user?.id || user?.role === "SUPER_ADMIN") && (
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Are you sure you want to clear running history?")) return;
+                              await api("/api/running/clear", { method: "POST" });
+                              const r = await api(`/api/running/user/${selectedProfile.id}`).catch(() => []);
+                              setProfileRuns(r);
+                            }}
+                            className="text-[9px] px-2 py-0.5 bg-red-600/20 text-red-300 border border-red-500/20 rounded"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await api("/api/running/restore", { method: "POST" });
+                              const r = await api(`/api/running/user/${selectedProfile.id}`).catch(() => []);
+                              setProfileRuns(r);
+                            }}
+                            className="text-[9px] px-2 py-0.5 bg-green-600/20 text-green-300 border border-green-500/20 rounded"
+                          >
+                            Restore
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Date filter & PDF export */}
+                    <div className="flex flex-col gap-1 bg-black/20 p-2 rounded text-[10px]">
+                      <div className="flex gap-2">
+                        <label className="block flex-1">
+                          <span className="text-white/40 block mb-0.5">Start</span>
+                          <input type="date" className="input-field text-[10px] py-0.5" value={profileRunStart} onChange={(e) => setProfileRunStart(e.target.value)} />
+                        </label>
+                        <label className="block flex-1">
+                          <span className="text-white/40 block mb-0.5">End</span>
+                          <input type="date" className="input-field text-[10px] py-0.5" value={profileRunEnd} onChange={(e) => setProfileRunEnd(e.target.value)} />
+                        </label>
+                      </div>
+                      <button
+                        onClick={() => {
+                          let filtered = profileRuns;
+                          if (profileRunStart) {
+                            const start = new Date(profileRunStart).getTime();
+                            filtered = filtered.filter(r => new Date(r.createdAt).getTime() >= start);
+                          }
+                          if (profileRunEnd) {
+                            const end = new Date(profileRunEnd);
+                            end.setHours(23, 59, 59, 999);
+                            filtered = filtered.filter(r => new Date(r.createdAt).getTime() <= end.getTime());
+                          }
+                          const headers = ["Distance (km)", "Duration (min)", "Pace (min/km)", "Speed (km/h)", "Date", "Notes"];
+                          const rows = filtered.map(r => [
+                            `${r.distanceKm} km`,
+                            `${r.durationMin} min`,
+                            r.paceMinKm ? `${r.paceMinKm.toFixed(2)} min/km` : "—",
+                            r.paceMinKm ? `${(60 / r.paceMinKm).toFixed(2)} km/h` : "—",
+                            new Date(r.createdAt).toLocaleDateString(),
+                            r.notes || "—"
+                          ]);
+                          printReport(`${selectedProfile.fullName}'s Running History Report`, headers, rows);
+                        }}
+                        className="btn-gold w-full text-[10px] py-1 mt-1"
+                      >
+                        Download PDF
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                      {profileRuns.map((r) => (
+                        <div key={r.id} className="p-2 bg-surface rounded border border-white/5 text-[11px]">
+                          <div className="flex justify-between font-medium">
+                            <span className="text-white">{r.distanceKm} km in {r.durationMin} min</span>
+                            <span className="text-white/40 text-[9px]">{new Date(r.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-[10px] text-white/50 mt-0.5">
+                            Speed: {r.paceMinKm ? (60 / r.paceMinKm).toFixed(2) : "—"} km/h
+                            {r.notes && ` · Notes: ${r.notes}`}
+                          </p>
+                        </div>
+                      ))}
+                      {profileRuns.length === 0 && <p className="text-[10px] text-white/40 italic">No running sessions logged.</p>}
+                    </div>
                   </div>
                 </div>
 

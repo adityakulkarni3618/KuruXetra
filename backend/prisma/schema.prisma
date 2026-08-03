@@ -230,6 +230,7 @@ model Workout {
   photoUrl      String?
   createdAt     DateTime     @default(now())
   workoutTypeId String?
+  isCleared     Boolean      @default(false)
   season        Season?      @relation(fields: [seasonId], references: [id])
   user          User         @relation(fields: [userId], references: [id])
   workoutType   WorkoutType? @relation(fields: [workoutTypeId], references: [id])
@@ -249,6 +250,7 @@ model RunningLog {
   createdAt      DateTime @default(now())
   distanceMeters Int?
   rounds         Float?
+  isCleared      Boolean  @default(false)
   season         Season?  @relation(fields: [seasonId], references: [id])
   user           User     @relation(fields: [userId], references: [id])
 }
