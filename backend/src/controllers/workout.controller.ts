@@ -117,3 +117,27 @@ export async function restoreWorkouts(req: AuthedRequest, res: Response) {
     res.status(500).json({ error: "Failed to restore workouts" });
   }
 }
+
+export async function clearSessionLogs(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.athleteSessionLog.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: true },
+    });
+    res.json({ message: "Session history cleared successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to clear sessions" });
+  }
+}
+
+export async function restoreSessionLogs(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.athleteSessionLog.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: false },
+    });
+    res.json({ message: "Session history restored successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to restore sessions" });
+  }
+}

@@ -142,6 +142,7 @@ model AthleteSessionLog {
   completed           Boolean      @default(false)
   value               Float?
   status              String       @default("PENDING")
+  isCleared           Boolean      @default(false)
   createdAt           DateTime     @default(now())
   session             Session      @relation(fields: [sessionId], references: [id])
   user                User         @relation(fields: [userId], references: [id])
