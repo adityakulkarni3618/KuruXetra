@@ -205,6 +205,47 @@ export async function restoreAttendance(req: AuthedRequest, res: Response) {
   }
 }
 
+// Clear attendance globally for a sport (captain clears entire sport's attendance panel)
+export async function clearSportAttendance(req: AuthedRequest, res: Response) {
+  const { sportId } = req.params;
+  try {
+    // Captains can only clear their own sport
+    if (req.user!.role === "CAPTAIN") {
+      const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+      if (!sport || sport.captainId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only clear attendance for your own sport" });
+      }
+    }
+    await prisma.attendance.updateMany({
+      where: { sportId },
+      data: { isCleared: true },
+    });
+    res.json({ message: "Sport attendance cleared successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to clear sport attendance" });
+  }
+}
+
+// Restore attendance globally for a sport (captain restores entire sport's attendance panel)
+export async function restoreSportAttendance(req: AuthedRequest, res: Response) {
+  const { sportId } = req.params;
+  try {
+    if (req.user!.role === "CAPTAIN") {
+      const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+      if (!sport || sport.captainId !== req.user!.id) {
+        return res.status(403).json({ error: "You can only restore attendance for your own sport" });
+      }
+    }
+    await prisma.attendance.updateMany({
+      where: { sportId },
+      data: { isCleared: false },
+    });
+    res.json({ message: "Sport attendance restored successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to restore sport attendance" });
+  }
+}
+
 export async function sportAttendance(req: AuthedRequest, res: Response) {
   const { sportId } = req.params;
 
@@ -216,7 +257,7 @@ export async function sportAttendance(req: AuthedRequest, res: Response) {
   }
 
   const records = await prisma.attendance.findMany({
-    where: { sportId },
+    where: { sportId, isCleared: false },
     include: { user: { select: { fullName: true, uniqueId: true } } },
     orderBy: { timeIn: "desc" },
     take: 200,
