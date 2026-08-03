@@ -127,7 +127,7 @@ export default function WorkoutsPage() {
     try {
       const res = await api("/api/attendance/checkin", {
         method: "POST",
-        body: JSON.stringify({ sportId }),
+        body: JSON.stringify({ sportId, isSession: true }),
       });
       setSessionCheckInStates(prev => ({
         ...prev,
