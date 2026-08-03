@@ -2,17 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { printReport } from "@/lib/export";
 
 const TRACK_METERS = 250;
 
 export default function RunningPage() {
   const [runs, setRuns] = useState<any[]>([]);
+  const [me, setMe] = useState<any>(null);
   const [distanceKm, setDistanceKm] = useState("");
   const [rounds, setRounds] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pdfStart, setPdfStart] = useState("");
+  const [pdfEnd, setPdfEnd] = useState("");
+
+  const downloadPdf = () => {
+    let filtered = runs;
+    if (pdfStart) {
+      const start = new Date(pdfStart).getTime();
+      filtered = filtered.filter(r => new Date(r.createdAt).getTime() >= start);
+    }
+    if (pdfEnd) {
+      const end = new Date(pdfEnd);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(r => new Date(r.createdAt).getTime() <= end.getTime());
+    }
+
+    const headers = ["Distance (km)", "Duration (min)", "Pace (min/km)", "Speed (km/h)", "Date", "Notes"];
+    const rows = filtered.map(r => [
+      `${r.distanceKm} km`,
+      `${r.durationMin} min`,
+      r.paceMinKm ? `${r.paceMinKm.toFixed(2)} min/km` : "—",
+      r.paceMinKm ? `${(60 / r.paceMinKm).toFixed(2)} km/h` : "—",
+      new Date(r.createdAt).toLocaleDateString(),
+      r.notes || "—"
+    ]);
+
+    printReport(`${me?.fullName || "Athlete"}'s Running History Report`, headers, rows);
+  };
 
   const handleDistanceChange = (val: string) => {
     setDistanceKm(val);
@@ -39,7 +68,12 @@ export default function RunningPage() {
   };
 
   async function load() {
-    setRuns(await api("/api/running/me"));
+    const [r, m] = await Promise.all([
+      api("/api/running/me"),
+      api("/api/auth/me")
+    ]);
+    setRuns(r);
+    setMe(m);
   }
   useEffect(() => { load(); }, []);
 
@@ -133,6 +167,53 @@ export default function RunningPage() {
           <button type="submit" disabled={loading} className="btn-gold">Log run</button>
         </div>
       </form>
+
+      <div className="stat-card mb-6 border border-white/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-white">History Controls</h3>
+            <p className="text-xs text-white/50">Clear, restore or export your logged running sessions.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to clear your running history?")) return;
+                await api("/api/running/clear", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
+            >
+              Clear History
+            </button>
+            <button
+              onClick={async () => {
+                await api("/api/running/restore", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
+            >
+              Restore History
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 mt-4 pt-4 flex flex-col sm:flex-row items-end gap-3">
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">Start Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfStart} onChange={(e) => setPdfStart(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">End Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfEnd} onChange={(e) => setPdfEnd(e.target.value)} />
+          </label>
+          <button
+            onClick={downloadPdf}
+            className="btn-gold text-xs px-4 py-2"
+          >
+            Download PDF
+          </button>
+        </div>
+      </div>
 
       <h2 className="font-display font-semibold mb-3">History</h2>
       <div className="space-y-2">

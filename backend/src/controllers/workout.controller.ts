@@ -60,9 +60,60 @@ export async function logWorkout(req: AuthedRequest, res: Response) {
 
 export async function myWorkouts(req: AuthedRequest, res: Response) {
   const workouts = await prisma.workout.findMany({
-    where: { userId: req.user!.id },
+    where: { userId: req.user!.id, isCleared: false },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
   res.json(workouts);
+}
+
+export async function getUserWorkouts(req: AuthedRequest, res: Response) {
+  const { userId } = req.params;
+  const viewerId = req.user!.id;
+  const viewerRole = req.user!.role;
+
+  try {
+    const target = await prisma.user.findUnique({ where: { id: userId } });
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    const isSelf = target.id === viewerId;
+    const isViewerAdmin = viewerRole === "SUPER_ADMIN";
+    const canSee = target.isPublic || isSelf || isViewerAdmin;
+
+    if (!canSee) {
+      return res.status(403).json({ error: "This profile is private." });
+    }
+
+    const workouts = await prisma.workout.findMany({
+      where: { userId, isCleared: false },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(workouts);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to retrieve user workouts" });
+  }
+}
+
+export async function clearWorkouts(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.workout.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: true },
+    });
+    res.json({ message: "Workout history cleared successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to clear workouts" });
+  }
+}
+
+export async function restoreWorkouts(req: AuthedRequest, res: Response) {
+  try {
+    await prisma.workout.updateMany({
+      where: { userId: req.user!.id },
+      data: { isCleared: false },
+    });
+    res.json({ message: "Workout history restored successfully" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to restore workouts" });
+  }
 }

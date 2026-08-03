@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { printReport } from "@/lib/export";
 
 const emptyForm = {
   workoutName: "",
@@ -25,6 +26,35 @@ export default function WorkoutsPage() {
   const [showLogForm, setShowLogForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [sessionCheckInStates, setSessionCheckInStates] = useState<Record<string, { checkInTime: string; loading: boolean }>>({});
+  const [pdfStart, setPdfStart] = useState("");
+  const [pdfEnd, setPdfEnd] = useState("");
+
+  const downloadPdf = () => {
+    let filtered = workouts;
+    if (pdfStart) {
+      const start = new Date(pdfStart).getTime();
+      filtered = filtered.filter(w => new Date(w.createdAt).getTime() >= start);
+    }
+    if (pdfEnd) {
+      const end = new Date(pdfEnd);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(w => new Date(w.createdAt).getTime() <= end.getTime());
+    }
+
+    const headers = ["Workout / Exercise", "Sets", "Reps", "Weight (kg)", "Duration (min)", "Calories", "Date", "Notes"];
+    const rows = filtered.map(w => [
+      w.name,
+      w.sets || "—",
+      w.reps || "—",
+      w.weightKg || "—",
+      w.durationMin || "—",
+      w.calories || "—",
+      new Date(w.createdAt).toLocaleDateString(),
+      w.notes || "—"
+    ]);
+
+    printReport(`${me?.fullName || "Athlete"}'s Workout History Report`, headers, rows);
+  };
 
   async function load() {
     const [w, m, s, att] = await Promise.all([
@@ -396,6 +426,53 @@ export default function WorkoutsPage() {
       )}
 
       {/* ── Personal Workout History ── */}
+      <div className="stat-card mb-6 border border-white/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-white">History Controls</h3>
+            <p className="text-xs text-white/50">Clear, restore or export your logged workouts.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={async () => {
+                if (!confirm("Are you sure you want to clear your workout history?")) return;
+                await api("/api/workouts/clear", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
+            >
+              Clear History
+            </button>
+            <button
+              onClick={async () => {
+                await api("/api/workouts/restore", { method: "POST" });
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
+            >
+              Restore History
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 mt-4 pt-4 flex flex-col sm:flex-row items-end gap-3">
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">Start Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfStart} onChange={(e) => setPdfStart(e.target.value)} />
+          </label>
+          <label className="block flex-1">
+            <span className="label text-[10px] text-white/40 mb-1">End Date</span>
+            <input type="date" className="input-field text-xs py-1.5" value={pdfEnd} onChange={(e) => setPdfEnd(e.target.value)} />
+          </label>
+          <button
+            onClick={downloadPdf}
+            className="btn-gold text-xs px-4 py-2"
+          >
+            Download PDF
+          </button>
+        </div>
+      </div>
+
       <div>
         <h2 className="font-display font-semibold mb-3">My Workout History</h2>
         <div className="space-y-3">
