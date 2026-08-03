@@ -280,6 +280,54 @@ export default function CaptainAttendancePage() {
         </div>
       </div>
 
+      {/* History Controls */}
+      <div className="stat-card mb-6 border border-white/5 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold text-white">History Controls</h3>
+            <p className="text-xs text-white/50">Choose to clear or restore attendance from your personal account only, or globally for the entire sport roster.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={async () => {
+                const choice = confirm(
+                  "Clear attendance globally (entire sport roster)?\n\nClick OK for Global clear.\nClick Cancel for your account only."
+                );
+                if (choice) {
+                  if (!confirm(`This will hide ALL ${mySport?.name} attendance from the roster panel. Are you sure?`)) return;
+                  await api(`/api/attendance/sport/${mySport?.id}/clear`, { method: "POST" });
+                } else {
+                  if (!confirm("Clear attendance from your account only?")) return;
+                  await api("/api/attendance/clear", { method: "POST" });
+                }
+                setMessage("Attendance cleared.");
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
+            >
+              Clear Attendance
+            </button>
+            <button
+              onClick={async () => {
+                const choice = confirm(
+                  "Restore attendance globally (entire sport roster)?\n\nClick OK for Global restore.\nClick Cancel for your account only."
+                );
+                if (choice) {
+                  await api(`/api/attendance/sport/${mySport?.id}/restore`, { method: "POST" });
+                } else {
+                  await api("/api/attendance/restore", { method: "POST" });
+                }
+                setMessage("Attendance restored.");
+                await load();
+              }}
+              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
+            >
+              Restore Attendance
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* List Table */}
       <h2 className="font-display font-semibold mb-3 text-white">Roster Attendance History ({filteredAttendance.length})</h2>
       <div className="stat-card p-0 overflow-hidden">
