@@ -59,7 +59,7 @@ export default function AdminSportSessionsPage() {
         "Session Title": sess.title,
         "Start Time": new Date(sess.startTime).toLocaleString(),
         "Athlete Name": log.user.fullName,
-        "Workout Name": log.workoutType.name,
+        "Workout Name": log.customExerciseName || log.workoutType?.name || "Exercise",
         "Rounds / Status": log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
       }))
     );
@@ -73,7 +73,7 @@ export default function AdminSportSessionsPage() {
         sess.title,
         new Date(sess.startTime).toLocaleString(),
         log.user.fullName,
-        log.workoutType.name,
+        log.customExerciseName || log.workoutType?.name || "Exercise",
         log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed",
       ])
     );
@@ -130,7 +130,7 @@ export default function AdminSportSessionsPage() {
               <ul className="list-disc pl-5 space-y-1 text-sm text-white/70">
                 {sess.workouts.map((w: any) => (
                   <li key={w.id}>
-                    {w.workoutType.name} {w.rounds ? "(Rounds tracked)" : ""}
+                    {w.customName || w.workoutType?.name || "Exercise"} {w.rounds ? "(Rounds tracked)" : ""}
                   </li>
                 ))}
               </ul>
@@ -142,7 +142,7 @@ export default function AdminSportSessionsPage() {
                 <div className="space-y-1.5 text-xs text-white/70">
                   {sess.athleteLogs.map((log: any) => (
                     <div key={log.id} className="flex justify-between border-b border-white/5 py-1">
-                      <span>{log.user.fullName} ({log.workoutType.name})</span>
+                      <span>{log.user.fullName} ({log.customExerciseName || log.workoutType?.name || "Exercise"})</span>
                       <span className="text-gold">
                         {log.value !== null && log.value !== undefined ? `${log.value} rounds` : log.completed ? "Completed" : "Not Completed"}
                       </span>
