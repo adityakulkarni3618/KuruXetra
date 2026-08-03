@@ -208,6 +208,7 @@ model Attendance {
   durationMin Int?
   ground      String?
   markedBy    String?
+  isSession   Boolean   @default(false)
   date        DateTime  @default(now())
   createdAt   DateTime  @default(now())
   season      Season?   @relation(fields: [seasonId], references: [id])

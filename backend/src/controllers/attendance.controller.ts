@@ -4,11 +4,36 @@ import { AuthedRequest } from "../middleware/auth";
 import { awardPoints, POINTS } from "../utils/points";
 import { checkAndAwardBadges } from "../utils/badgeChecker";
 
+async function autoCheckoutPendingEntries(userId: string) {
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const expiredEntries = await prisma.attendance.findMany({
+    where: {
+      userId,
+      timeOut: null,
+      isSession: false,
+      timeIn: { lt: threeHoursAgo }
+    }
+  });
+
+  for (const entry of expiredEntries) {
+    const timeOut = new Date(entry.timeIn.getTime() + 3 * 60 * 60 * 1000);
+    await prisma.attendance.update({
+      where: { id: entry.id },
+      data: {
+        timeOut,
+        durationMin: 180
+      }
+    });
+  }
+}
+
 // Digital replacement for the physical register: a student checks in when
 // they arrive on the ground.
 export async function checkIn(req: AuthedRequest, res: Response) {
   const userId = req.user!.id;
-  const { sportId, ground } = req.body as { sportId?: string; ground?: string };
+  const { sportId, ground, isSession } = req.body as { sportId?: string; ground?: string; isSession?: boolean };
+
+  await autoCheckoutPendingEntries(userId);
 
   if (sportId) {
     const membership = await prisma.membership.findFirst({
@@ -26,7 +51,7 @@ export async function checkIn(req: AuthedRequest, res: Response) {
   if (openEntry) return res.status(409).json({ error: "You already have an open check-in. Check out first." });
 
   const entry = await prisma.attendance.create({
-    data: { userId, sportId, ground, timeIn: new Date() },
+    data: { userId, sportId, ground, timeIn: new Date(), isSession: isSession ?? false },
   });
 
   await awardPoints(userId, POINTS.ATTENDANCE, "ATTENDANCE", entry.id);
@@ -36,6 +61,8 @@ export async function checkIn(req: AuthedRequest, res: Response) {
 
 export async function checkOut(req: AuthedRequest, res: Response) {
   const userId = req.user!.id;
+
+  await autoCheckoutPendingEntries(userId);
 
   const openEntry = await prisma.attendance.findFirst({
     where: { userId, timeOut: null },
@@ -145,6 +172,7 @@ export async function batchMarkAttendance(req: AuthedRequest, res: Response) {
 }
 
 export async function myAttendance(req: AuthedRequest, res: Response) {
+  await autoCheckoutPendingEntries(req.user!.id);
   const records = await prisma.attendance.findMany({
     where: { userId: req.user!.id },
     orderBy: { timeIn: "desc" },
