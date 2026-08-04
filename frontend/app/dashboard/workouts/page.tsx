@@ -383,11 +383,17 @@ export default function WorkoutsPage() {
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => submitSessionLog(
-                                    sess.id, w.id, exName, true,
-                                    roundsForm[key] ? Number(roundsForm[key]) : undefined
-                                  )}
-                                  disabled={!roundsForm[key]}
+                                  onClick={() => {
+                                    const value = Number(roundsForm[key]);
+                                    submitSessionLog(
+                                      sess.id,
+                                      w.id,
+                                      exName,
+                                      true,
+                                      !Number.isNaN(value) ? value : undefined
+                                    );
+                                  }}
+                                  disabled={!roundsForm[key] || Number.isNaN(Number(roundsForm[key]))}
                                   className="btn-gold text-xs px-3 py-1.5 disabled:opacity-40"
                                 >
                                   Submit ✓

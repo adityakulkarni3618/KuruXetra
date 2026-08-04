@@ -102,16 +102,30 @@ export default function SportsPage() {
   async function logExercise(sessionId: string, workoutId: string, exerciseName: string, _rounds: boolean) {
     const key = `${sessionId}-${workoutId}`;
     const state = logStates[key] || { value: "", completed: false, submitted: false };
+    const parsedValue = state.value ? parseFloat(state.value) : undefined;
+
+    if (parsedValue === undefined || Number.isNaN(parsedValue)) {
+      setMessage("Please enter a valid number before submitting.");
+      return;
+    }
+
     try {
       await api(`/api/admin-features/sessions/${sessionId}/logs`, {
         method: "POST",
         body: JSON.stringify({
           sessionWorkoutId: workoutId,
           completed: true,
-          value: state.value ? parseFloat(state.value) : undefined,
+          value: parsedValue,
         }),
       });
-      setLogStates((prev) => ({ ...prev, [key]: { ...state, submitted: true } }));
+      setLogStates((prev) => ({
+        ...prev,
+        [key]: {
+          ...(prev[key] ?? { value: "", completed: false, submitted: false }),
+          value: "",
+          submitted: true,
+        },
+      }));
       setMessage(`Logged: ${exerciseName}`);
       if (selectedSport) openSportDetail(selectedSport);
     } catch (err: any) {
@@ -421,11 +435,6 @@ export default function SportsPage() {
                     const sess = item.data;
                     const isActive = sess.status === "ACTIVE";
                     const myLogs = sess.athleteLogs?.filter((l: any) => l.user.id === me?.id) || [];
-                    const myLogMap: Record<string, any> = {};
-                    myLogs.forEach((l: any) => {
-                      const name = l.customExerciseName || l.workoutType?.name || "";
-                      myLogMap[name] = l;
-                    });
                     const checkInState = sessionCheckInStates[sess.id] || { checkInTime: "", loading: false };
 
                     return (
@@ -488,7 +497,10 @@ export default function SportsPage() {
                                           value={localState.value}
                                           onChange={(e) => setLogStates((prev) => ({
                                             ...prev,
-                                            [key]: { ...localState, value: e.target.value }
+                                            [key]: {
+                                              ...(prev[key] ?? { value: "", completed: false, submitted: false }),
+                                              value: e.target.value,
+                                            },
                                           }))}
                                         />
                                         <button

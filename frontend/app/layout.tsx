@@ -5,6 +5,11 @@ import { AuthProvider } from "@/lib/auth-context";
 export const metadata: Metadata = {
   title: "Kuruxetra | Sports Management System",
   description: "The digital ground register for our college.",
+  themeColor: "#111827",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

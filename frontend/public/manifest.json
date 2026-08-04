@@ -1,0 +1,19 @@
+{
+  "name": "Kuruxetra Sports App",
+  "short_name": "Kuruxetra",
+  "description": "A mobile-friendly sports management experience for training sessions, attendance, and workout logging.",
+  "start_url": "/login",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#111827",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
