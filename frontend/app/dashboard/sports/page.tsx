@@ -435,6 +435,11 @@ export default function SportsPage() {
                     const sess = item.data;
                     const isActive = sess.status === "ACTIVE";
                     const myLogs = sess.athleteLogs?.filter((l: any) => l.user.id === me?.id) || [];
+                    const myLogMap: Record<string, any> = {};
+                    myLogs.forEach((l: any) => {
+                      const name = l.customExerciseName || l.workoutType?.name || "";
+                      myLogMap[name] = l;
+                    });
                     const checkInState = sessionCheckInStates[sess.id] || { checkInTime: "", loading: false };
 
                     return (
