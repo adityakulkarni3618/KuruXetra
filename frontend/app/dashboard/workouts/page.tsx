@@ -75,7 +75,11 @@ export default function WorkoutsPage() {
       const myLogs = sess.athleteLogs?.filter((l: any) => l.userId === me?.id && !l.isCleared) || [];
       sess.workouts.forEach((w: any) => {
         const exName = w.customName || w.workoutType?.name || "Exercise";
-        const myLog = myLogs.find((l: any) => l.customExerciseName === exName || l.workoutTypeId === w.workoutTypeId);
+        const myLog = myLogs.find((l: any) => 
+          w.workoutTypeId 
+            ? (l.workoutTypeId === w.workoutTypeId && l.customExerciseName === exName)
+            : (l.customExerciseName === exName)
+        );
         rows.push([
           sess.title,
           sess.sport?.name,
@@ -353,7 +357,9 @@ export default function WorkoutsPage() {
                       const key = `${sess.id}_${w.id}`;
                       const myLog = sess.athleteLogs?.find(
                         (log: any) => log.userId === me?.id &&
-                        (log.customExerciseName === exName || log.workoutTypeId === w.workoutTypeId)
+                        (w.workoutTypeId 
+                          ? (log.workoutTypeId === w.workoutTypeId && log.customExerciseName === exName)
+                          : (log.customExerciseName === exName))
                       );
                       const isLogged = !!myLog;
 
