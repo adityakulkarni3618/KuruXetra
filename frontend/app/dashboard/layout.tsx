@@ -166,11 +166,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-border pt-4 mt-4 md:mt-8">
           <p className="text-sm font-medium">{user.fullName}</p>
           <p className="text-xs text-white/40">{user.uniqueId} · {roleLabel(user.role)}</p>
-          <div className="flex justify-between items-center mt-3">
-            <button onClick={logout} className="text-xs text-red-400 hover:text-red-300" type="button">
-              Log out
-            </button>
-          </div>
+          <button
+            onClick={logout}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-300 hover:text-red-200 text-xs font-semibold rounded-lg transition-all duration-200"
+            type="button"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Log out
+          </button>
         </div>
       </aside>
 
