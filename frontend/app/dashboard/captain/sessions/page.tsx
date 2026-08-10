@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { exportToCSV, printReport } from "@/lib/export";
-
+import CaptainSportSelector from "@/components/CaptainSportSelector";
 export default function CaptainSessionsPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -22,17 +22,29 @@ export default function CaptainSessionsPage() {
   const [addExerciseName, setAddExerciseName] = useState("");
   const [addExerciseLoading, setAddExerciseLoading] = useState(false);
 
+  useEffect(() => {
+    async function init() {
+      try {
+        const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
+        setMySport(sport);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
   async function load() {
+    if (!mySport) return;
     setError("");
     setMessage("");
     try {
-      const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-      const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
-      setMySport(sport);
-      if (sport) {
-        const sess = await api(`/api/admin-features/sessions?sportId=${sport.id}`);
-        setSessions(sess);
-      }
+      const sess = await api(`/api/admin-features/sessions?sportId=${mySport.id}`);
+      setSessions(sess);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -40,7 +52,9 @@ export default function CaptainSessionsPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, [mySport?.id]);
 
   // ── Form exercise helpers ──────────────────────────────────────────────────
   const addExerciseToForm = () => {
@@ -251,6 +265,8 @@ export default function CaptainSessionsPage() {
           Back to Dashboard
         </Link>
       </div>
+
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport?.id} />
 
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>

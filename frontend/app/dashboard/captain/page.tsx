@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 
+import CaptainSportSelector from "@/components/CaptainSportSelector";
+
 export default function CaptainDashboard() {
   const [mySport, setMySport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -13,7 +15,9 @@ export default function CaptainDashboard() {
     async function load() {
       try {
         const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-        const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
         setMySport(sport);
       } catch (err: any) {
         setError(err.message);
@@ -103,6 +107,7 @@ export default function CaptainDashboard() {
 
   return (
     <div>
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport.id} />
       <h1 className="font-display text-3xl font-bold mb-1 text-white">{mySport.teamName || mySport.name}</h1>
       <p className="text-white/50 text-sm mb-8">{mySport.teamName ? `${mySport.name} · ` : ""}Team Management & configuration settings.</p>
 

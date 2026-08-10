@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { exportToCSV, printReport } from "@/lib/export";
-
+import CaptainSportSelector from "@/components/CaptainSportSelector";
 export default function CaptainAttendancePage() {
   const [mySport, setMySport] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -19,24 +19,34 @@ export default function CaptainAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
 
+  useEffect(() => {
+    async function init() {
+      try {
+        const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
+        setMySport(sport);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
   async function load() {
+    if (!mySport) return;
     setError("");
     setMessage("");
     try {
-      const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-      const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
-      setMySport(sport);
-      if (sport) {
-        const [mems, att] = await Promise.all([
-          api(`/api/sports/${sport.id}/members`),
-          api(`/api/attendance/sport/${sport.id}`),
-        ]);
-        setMembers(mems);
-        setAttendance(att);
-        
-        // Reset selections
-        setSelectedUserIds({});
-      }
+      const [mems, att] = await Promise.all([
+        api(`/api/sports/${mySport.id}/members`),
+        api(`/api/attendance/sport/${mySport.id}`),
+      ]);
+      setMembers(mems);
+      setAttendance(att);
+      setSelectedUserIds({});
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -46,7 +56,7 @@ export default function CaptainAttendancePage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [mySport?.id]);
 
   const approved = members.filter((m) => m.status === "APPROVED");
 
@@ -167,6 +177,8 @@ export default function CaptainAttendancePage() {
           Back to Dashboard
         </Link>
       </div>
+
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport?.id} />
 
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>

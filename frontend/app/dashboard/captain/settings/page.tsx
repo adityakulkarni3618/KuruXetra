@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-
+import CaptainSportSelector from "@/components/CaptainSportSelector";
 export default function CaptainSettingsPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [form, setForm] = useState({
@@ -18,23 +18,35 @@ export default function CaptainSettingsPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    async function init() {
+      try {
+        const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
+        setMySport(sport);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
   async function load() {
+    if (!mySport) return;
     setError("");
     setMessage("");
     try {
-      const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-      const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
-      setMySport(sport);
-      if (sport) {
-        setForm({
-          teamName: sport.teamName || "",
-          ground: sport.ground || "",
-          practiceTime: sport.practiceTime || "",
-          description: sport.description || "",
-          customAbout: sport.customAbout || "",
-          customNotice: sport.customNotice || "",
-        });
-      }
+      setForm({
+        teamName: mySport.teamName || "",
+        ground: mySport.ground || "",
+        practiceTime: mySport.practiceTime || "",
+        description: mySport.description || "",
+        customAbout: mySport.customAbout || "",
+        customNotice: mySport.customNotice || "",
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -44,7 +56,7 @@ export default function CaptainSettingsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [mySport?.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +86,8 @@ export default function CaptainSettingsPage() {
           Back to Dashboard
         </Link>
       </div>
+
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport?.id} />
 
       <div className="mb-8">
         <h1 className="font-display text-2xl font-bold mb-1 text-white">Sport Profile Settings</h1>

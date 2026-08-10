@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { exportToCSV, printReport } from "@/lib/export";
-
+import CaptainSportSelector from "@/components/CaptainSportSelector";
 export default function CaptainAnnouncementsPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -13,17 +13,29 @@ export default function CaptainAnnouncementsPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    async function init() {
+      try {
+        const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
+        setMySport(sport);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
   async function load() {
+    if (!mySport) return;
     setError("");
     setMessage("");
     try {
-      const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-      const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
-      setMySport(sport);
-      if (sport) {
-        const anns = await api(`/api/admin-features/announcements?sportId=${sport.id}`);
-        setAnnouncements(anns);
-      }
+      const anns = await api(`/api/admin-features/announcements?sportId=${mySport.id}`);
+      setAnnouncements(anns);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -33,7 +45,7 @@ export default function CaptainAnnouncementsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [mySport?.id]);
 
   async function postAnnouncement(e: React.FormEvent) {
     e.preventDefault();
@@ -102,6 +114,8 @@ export default function CaptainAnnouncementsPage() {
           Back to Dashboard
         </Link>
       </div>
+
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport?.id} />
 
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>

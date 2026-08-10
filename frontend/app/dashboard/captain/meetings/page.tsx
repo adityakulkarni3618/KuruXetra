@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { exportToCSV, printReport } from "@/lib/export";
-
+import CaptainSportSelector from "@/components/CaptainSportSelector";
 export default function CaptainMeetingsPage() {
   const [mySport, setMySport] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -15,21 +15,33 @@ export default function CaptainMeetingsPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    async function init() {
+      try {
+        const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
+        const mySports = sports.filter((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
+        const savedId = localStorage.getItem("selected_captain_sport_id");
+        const sport = mySports.find((s: any) => s.id === savedId) || mySports[0];
+        setMySport(sport);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
   async function load() {
+    if (!mySport) return;
     setError("");
     setMessage("");
     try {
-      const [me, sports] = await Promise.all([api("/api/auth/me"), api("/api/sports")]);
-      const sport = sports.find((s: any) => s.captainId === me.id || s.viceCaptainId === me.id);
-      setMySport(sport);
-      if (sport) {
-        const [mems, meets] = await Promise.all([
-          api(`/api/sports/${sport.id}/members`),
-          api(`/api/admin-features/meetings?sportId=${sport.id}`),
-        ]);
-        setMembers(mems);
-        setMeetings(meets);
-      }
+      const [mems, meets] = await Promise.all([
+        api(`/api/sports/${mySport.id}/members`),
+        api(`/api/admin-features/meetings?sportId=${mySport.id}`),
+      ]);
+      setMembers(mems);
+      setMeetings(meets);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -39,7 +51,7 @@ export default function CaptainMeetingsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [mySport?.id]);
 
   async function scheduleMeeting(e: React.FormEvent) {
     e.preventDefault();
@@ -136,6 +148,8 @@ export default function CaptainMeetingsPage() {
           Back to Dashboard
         </Link>
       </div>
+
+      <CaptainSportSelector onSportChanged={setMySport} currentSportId={mySport?.id} />
 
       <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <div>
