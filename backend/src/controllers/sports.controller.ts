@@ -94,11 +94,13 @@ export async function assignCaptain(req: AuthedRequest, res: Response) {
   }
 
   const sport = await prisma.sport.update({ where: { id }, data: { captainId: user.id } });
-  await prisma.user.update({ where: { id: user.id }, data: { role: "CAPTAIN" } });
+  if (user.role !== "SUPER_ADMIN") {
+    await prisma.user.update({ where: { id: user.id }, data: { role: "CAPTAIN" } });
+  }
   res.json(sport);
 }
 
-// Student requests to join a sport -> creates a PENDING membership
+// Student requests to join a sport -> creates a PENDING/APPROVED membership
 export async function joinSport(req: AuthedRequest, res: Response) {
   const { id: sportId } = req.params;
   const userId = req.user!.id;
@@ -106,10 +108,26 @@ export async function joinSport(req: AuthedRequest, res: Response) {
   const existing = await prisma.membership.findUnique({
     where: { userId_sportId: { userId, sportId } },
   });
-  if (existing) return res.status(409).json({ error: "You already requested/joined this sport" });
+
+  const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+  if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+  const initialStatus = sport.captainId ? "PENDING" : "APPROVED";
+
+  if (existing) {
+    if (existing.status === "APPROVED") {
+      return res.status(409).json({ error: "You already requested/joined this sport" });
+    }
+    // Update existing membership back to PENDING/APPROVED
+    const updated = await prisma.membership.update({
+      where: { id: existing.id },
+      data: { status: initialStatus, joinedAt: new Date() },
+    });
+    return res.json(updated);
+  }
 
   const membership = await prisma.membership.create({
-    data: { userId, sportId, status: "PENDING" },
+    data: { userId, sportId, status: initialStatus },
   });
   res.status(201).json(membership);
 }
@@ -163,15 +181,29 @@ export async function demoteCaptain(req: AuthedRequest, res: Response) {
       return res.json({ message: "Captain reference cleared" });
     }
 
-    const nextRole = captain.priorRole === "SUPER_ADMIN" ? "STUDENT_ATHLETE" : captain.priorRole || "STUDENT_ATHLETE";
+    const otherRolesCount = await prisma.sport.count({
+      where: {
+        OR: [
+          { captainId: captain.id },
+          { viceCaptainId: captain.id }
+        ],
+        NOT: { id: id },
+      }
+    });
 
-    await prisma.$transaction([
-      prisma.sport.update({ where: { id }, data: { captainId: null } }),
-      prisma.user.update({
-        where: { id: captain.id },
-        data: { role: nextRole, priorRole: null },
-      }),
-    ]);
+    if (captain.role === "SUPER_ADMIN" || otherRolesCount > 0) {
+      // Just remove the captain link from this sport, keep their role
+      await prisma.sport.update({ where: { id }, data: { captainId: null } });
+    } else {
+      const nextRole = captain.priorRole === "SUPER_ADMIN" ? "STUDENT_ATHLETE" : captain.priorRole || "STUDENT_ATHLETE";
+      await prisma.$transaction([
+        prisma.sport.update({ where: { id }, data: { captainId: null } }),
+        prisma.user.update({
+          where: { id: captain.id },
+          data: { role: nextRole, priorRole: null },
+        }),
+      ]);
+    }
 
     return res.json({ message: "Captain demoted successfully" });
   } catch (error: any) {
@@ -271,11 +303,13 @@ export async function assignViceCaptain(req: AuthedRequest, res: Response) {
     data: { viceCaptainId: user.id },
   });
 
-  // Promote to CAPTAIN role so they share Captain privileges
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { role: "CAPTAIN" },
-  });
+  // Promote to CAPTAIN role so they share Captain privileges if not SUPER_ADMIN
+  if (user.role !== "SUPER_ADMIN") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: "CAPTAIN" },
+    });
+  }
 
   res.json(sport);
 }
@@ -292,31 +326,114 @@ export async function demoteViceCaptain(req: AuthedRequest, res: Response) {
     }
 
     const viceCaptainId = sport.viceCaptainId;
+    const viceCaptain = await prisma.user.findUnique({ where: { id: viceCaptainId } });
 
     const sportUpdated = await prisma.sport.update({
       where: { id },
       data: { viceCaptainId: null },
     });
 
-    // Demote role if they are no longer captain/vice-captain of any sport
-    const otherRoles = await prisma.sport.count({
-      where: {
-        OR: [{ captainId: viceCaptainId }, { viceCaptainId: viceCaptainId }],
-        NOT: { id },
-      },
-    });
-
-    if (otherRoles === 0) {
-      await prisma.user.update({
-        where: { id: viceCaptainId },
-        data: { role: "STUDENT_ATHLETE" },
+    if (viceCaptain && viceCaptain.role !== "SUPER_ADMIN") {
+      // Demote role if they are no longer captain/vice-captain of any sport
+      const otherRoles = await prisma.sport.count({
+        where: {
+          OR: [{ captainId: viceCaptainId }, { viceCaptainId: viceCaptainId }],
+          NOT: { id },
+        },
       });
+
+      if (otherRoles === 0) {
+        await prisma.user.update({
+          where: { id: viceCaptainId },
+          data: { role: "STUDENT_ATHLETE" },
+        });
+      }
     }
 
     res.json(sportUpdated);
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: "Failed to demote vice-captain" });
+  }
+}
+
+export async function leaveSport(req: AuthedRequest, res: Response) {
+  const { id: sportId } = req.params;
+  const userId = req.user!.id;
+
+  try {
+    const existing = await prisma.membership.findUnique({
+      where: { userId_sportId: { userId, sportId } },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: "You are not a member of this sport/team." });
+    }
+
+    // Delete the membership so it's completely cleared
+    await prisma.membership.delete({
+      where: { userId_sportId: { userId, sportId } },
+    });
+
+    res.json({ message: "Successfully left the team." });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to leave sport/team" });
+  }
+}
+
+export async function globalSearch(req: AuthedRequest, res: Response) {
+  const { query } = req.query as { query?: string };
+
+  if (!query) {
+    return res.json({ athletes: [], sports: [] });
+  }
+
+  try {
+    const [athletes, sports] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          OR: [
+            { fullName: { contains: query, mode: "insensitive" } },
+            { uniqueId: { contains: query, mode: "insensitive" } },
+            { department: { contains: query, mode: "insensitive" } },
+          ],
+          status: "ACTIVE",
+        },
+        select: {
+          id: true,
+          fullName: true,
+          uniqueId: true,
+          department: true,
+          academicYear: true,
+          profilePhotoUrl: true,
+          role: true,
+          captainOf: { select: { name: true } },
+          viceCaptainOf: { select: { name: true } },
+        },
+        take: 20,
+      }),
+      prisma.sport.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { teamName: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+          ],
+          isActive: true,
+        },
+        include: {
+          captain: { select: { fullName: true } },
+          viceCaptain: { select: { fullName: true } },
+        },
+        take: 10,
+      }),
+    ]);
+
+    res.json({ athletes, sports });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to perform global search" });
   }
 }
 
