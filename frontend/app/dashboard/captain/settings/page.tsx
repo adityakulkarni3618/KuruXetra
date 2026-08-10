@@ -74,6 +74,19 @@ export default function CaptainSettingsPage() {
     }
   }
 
+  async function handleResign() {
+    if (!confirm("Are you sure you want to resign from your position as Captain of this team? This action is immediate and cannot be undone.")) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/sports/${mySport.id}/resign-captain`, { method: "POST" });
+      alert("You have stepped down from captainship.");
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
   if (loading) {
     return <div className="text-white/40 text-center py-10">Loading settings...</div>;
   }
@@ -155,6 +168,18 @@ export default function CaptainSettingsPage() {
           </label>
           <button type="submit" className="btn-gold w-full mt-4">Save Profile Settings</button>
         </form>
+
+        <div className="border-t border-white/5 mt-8 pt-6">
+          <h3 className="text-red-400 font-semibold mb-2 text-sm">Danger Zone</h3>
+          <p className="text-xs text-white/40 mb-3">Stepping down from captainship will remove your access to the team manager panels immediately.</p>
+          <button
+            type="button"
+            onClick={handleResign}
+            className="bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 font-semibold px-5 py-2 rounded-lg transition-all text-xs"
+          >
+            Resign Captainship
+          </button>
+        </div>
       </div>
     </div>
   );

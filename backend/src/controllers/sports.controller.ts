@@ -437,4 +437,50 @@ export async function globalSearch(req: AuthedRequest, res: Response) {
   }
 }
 
+export async function resignCaptain(req: AuthedRequest, res: Response) {
+  const { id } = req.params; // sportId
+  const userId = req.user!.id;
+
+  try {
+    const sport = await prisma.sport.findUnique({ where: { id } });
+    if (!sport) return res.status(404).json({ error: "Sport not found" });
+
+    if (sport.captainId !== userId) {
+      return res.status(403).json({ error: "You are not the captain of this sport" });
+    }
+
+    const captain = await prisma.user.findUnique({ where: { id: userId } });
+    if (!captain) return res.status(404).json({ error: "User not found" });
+
+    const otherRolesCount = await prisma.sport.count({
+      where: {
+        OR: [
+          { captainId: userId },
+          { viceCaptainId: userId }
+        ],
+        NOT: { id: id },
+      }
+    });
+
+    if (captain.role === "SUPER_ADMIN" || otherRolesCount > 0) {
+      // Just remove the captain link from this sport, keep their role
+      await prisma.sport.update({ where: { id }, data: { captainId: null } });
+    } else {
+      const nextRole = captain.priorRole === "SUPER_ADMIN" ? "STUDENT_ATHLETE" : captain.priorRole || "STUDENT_ATHLETE";
+      await prisma.$transaction([
+        prisma.sport.update({ where: { id }, data: { captainId: null } }),
+        prisma.user.update({
+          where: { id: userId },
+          data: { role: nextRole, priorRole: null },
+        }),
+      ]);
+    }
+
+    return res.json({ message: "Successfully stepped down as captain" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to resign captainship" });
+  }
+}
+
 
