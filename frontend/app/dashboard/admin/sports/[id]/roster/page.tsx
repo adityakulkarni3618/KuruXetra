@@ -282,10 +282,10 @@ export default function AdminSportRosterPage() {
                       <p className="font-medium text-lg text-white">{user.fullName}</p>
                       <span className="text-white/30 text-sm">({user.uniqueId})</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                        user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                        (sport?.captainId === user.id || sport?.viceCaptainId === user.id) ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
                           "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                         }`}>
-                        {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
+                        {user.role === "SUPER_ADMIN" ? "Sports Secretary" : sport?.captainId === user.id ? "Captain" : sport?.viceCaptainId === user.id ? "Vice-Captain" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
                       </span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
                         user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" :

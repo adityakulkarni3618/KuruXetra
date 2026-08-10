@@ -128,14 +128,20 @@ export default function AdminSearchAthletesPage() {
             const headers = ["Athletic ID", "Full Name", "Roll Number", "Department", "Academic Year", "Email", "Athlete Post / Role", "Athlete Posts List"];
             const rows = list.map((u: any) => {
               // Construct current athlete post/role label (SS, Captain, Vice Captain, Athlete)
-              let athletePost = "Student Athlete";
+              let roles: string[] = [];
               if (u.role === "SUPER_ADMIN") {
-                athletePost = "Sports Secretary (Admin)";
-              } else if (u.captainOf && u.captainOf.length > 0) {
-                athletePost = `Captain of ${u.captainOf.map((s: any) => s.name).join(", ")}`;
-              } else if (u.viceCaptainOf && u.viceCaptainOf.length > 0) {
-                athletePost = `Vice-Captain of ${u.viceCaptainOf.map((s: any) => s.name).join(", ")}`;
+                roles.push("Sports Secretary (Admin)");
               }
+              if (u.captainOf && u.captainOf.length > 0) {
+                roles.push(`Captain of ${u.captainOf.map((s: any) => s.name).join(", ")}`);
+              }
+              if (u.viceCaptainOf && u.viceCaptainOf.length > 0) {
+                roles.push(`Vice-Captain of ${u.viceCaptainOf.map((s: any) => s.name).join(", ")}`);
+              }
+              if (roles.length === 0) {
+                roles.push("Student Athlete");
+              }
+              let athletePost = roles.join(" & ");
 
               const postsStr = u.posts && u.posts.length > 0
                 ? u.posts.map((p: any, idx: number) => `${idx + 1}. "${p.content}" (${new Date(p.createdAt).toLocaleDateString()})`).join("<br/>")
@@ -212,13 +218,25 @@ export default function AdminSearchAthletesPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-lg text-white">{user.fullName}</p>
                     <span className="text-white/30 text-sm">({user.uniqueId})</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
-                      user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                      user.role === "CAPTAIN" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
-                      "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                    }`}>
-                      {user.role === "SUPER_ADMIN" ? "Sports Secretary" : user.role === "CAPTAIN" ? "Captain" : "Athlete"}
-                    </span>
+                    {(() => {
+                      const userRoles: string[] = [];
+                      if (user.role === "SUPER_ADMIN") userRoles.push("Sports Secretary");
+                      if (user.captainOf && user.captainOf.length > 0) userRoles.push("Captain");
+                      else if (user.viceCaptainOf && user.viceCaptainOf.length > 0) userRoles.push("Vice-Captain");
+                      else if (user.role === "CAPTAIN") userRoles.push("Captain");
+
+                      if (userRoles.length === 0) userRoles.push("Athlete");
+
+                      return (
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                          user.role === "SUPER_ADMIN" ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                          (user.captainOf?.length > 0 || user.viceCaptainOf?.length > 0 || user.role === "CAPTAIN") ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                          "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                        }`}>
+                          {userRoles.join(" & ")}
+                        </span>
+                      );
+                    })()}
                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                       user.status === "ACTIVE" ? "bg-green-500/20 text-green-300" :
                       user.status === "SUSPENDED" ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300"
