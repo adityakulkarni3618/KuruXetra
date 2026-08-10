@@ -46,6 +46,18 @@ export default function SportsPage() {
     }
   }
 
+  async function leave(sportId: string) {
+    if (!confirm("Are you sure you want to leave this team?")) return;
+    setMessage("");
+    try {
+      await api(`/api/sports/${sportId}/leave`, { method: "POST" });
+      setMessage("Successfully left the team.");
+      await load();
+    } catch (err: any) {
+      setMessage(err.message);
+    }
+  }
+
   async function openSportDetail(sport: any) {
     setSelectedSport(sport);
     setDetailLoading(true);
@@ -206,7 +218,13 @@ export default function SportsPage() {
                         onClick={() => openSportDetail(s)}
                         className="btn-gold text-xs px-4 py-2"
                       >
-                        View Team Feed & Reminders →
+                        View Team Feed & Reminders &rarr;
+                      </button>
+                      <button
+                        onClick={() => leave(s.id)}
+                        className="btn-primary bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 text-xs px-4 py-2"
+                      >
+                        Leave Team
                       </button>
                     </div>
                   </div>
@@ -374,14 +392,26 @@ export default function SportsPage() {
             </button>
           </div>
 
-          <div className="mb-6 pb-6 border-b border-white/5">
-            <h1 className="font-display text-3xl font-bold text-white">{selectedSport.teamName || selectedSport.name}</h1>
-            {selectedSport.teamName && <p className="text-white/40 text-sm mt-0.5">{selectedSport.name}</p>}
-            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-xs text-white/50">
-              {selectedSport.captain && <p>👑 Captain: <span className="text-white font-medium">{selectedSport.captain.fullName}</span></p>}
-              {selectedSport.ground && <p>📍 Location: <span className="text-white font-medium">{selectedSport.ground}</span></p>}
-              {selectedSport.practiceTime && <p>⏰ practice Time: <span className="text-white font-medium">{selectedSport.practiceTime}</span></p>}
+          <div className="flex justify-between items-start mb-6 pb-6 border-b border-white/5 flex-wrap gap-4">
+            <div>
+              <h1 className="font-display text-3xl font-bold text-white">{selectedSport.teamName || selectedSport.name}</h1>
+              {selectedSport.teamName && <p className="text-white/40 text-sm mt-0.5">{selectedSport.name}</p>}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-xs text-white/50">
+                {selectedSport.captain && <p>👑 Captain: <span className="text-white font-medium">{selectedSport.captain.fullName}</span></p>}
+                {selectedSport.ground && <p>📍 Location: <span className="text-white font-medium">{selectedSport.ground}</span></p>}
+                {selectedSport.practiceTime && <p>⏰ practice Time: <span className="text-white font-medium">{selectedSport.practiceTime}</span></p>}
+              </div>
             </div>
+            <button
+              onClick={async () => {
+                await leave(selectedSport.id);
+                setSelectedSport(null);
+                setSportDetail(null);
+              }}
+              className="btn-primary bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 text-xs px-4 py-2 shrink-0 self-start"
+            >
+              Leave Team
+            </button>
           </div>
 
           {globalMessage && <div className="bg-blue/10 border border-blue/30 text-blue-light text-sm rounded-lg px-4 py-3 mb-6">{globalMessage}</div>}
