@@ -87,8 +87,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           KURUXETRA<span className="text-gold">.</span>
         </Link>
         <div className="flex items-center gap-2">
-          <button onClick={toggleTheme} className="text-xs text-gold border border-gold/15 bg-gold/5 px-2.5 py-1 rounded-lg font-medium" type="button">
-            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg border border-gold/20 bg-gold/5 hover:bg-gold/10 transition-colors flex items-center justify-center"
+            type="button"
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === "dark" ? (
+              <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
           </button>
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
@@ -109,8 +122,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="font-display text-lg font-bold">
             KURUXETRA<span className="text-gold">.</span>
           </Link>
-          <button onClick={toggleTheme} className="text-xs text-gold border border-gold/15 bg-gold/5 px-2.5 py-1 rounded-lg font-medium" type="button">
-            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg border border-gold/20 bg-gold/5 hover:bg-gold/10 transition-colors flex items-center justify-center"
+            type="button"
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === "dark" ? (
+              <svg className="w-4.5 h-4.5 text-gold" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              </svg>
+            ) : (
+              <svg className="w-4.5 h-4.5 text-gold" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
           </button>
         </div>
 
