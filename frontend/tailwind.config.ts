@@ -6,14 +6,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0B0D12",
-        surface: "#12151C",
-        card: "#171B24",
-        border: "#242938",
+        ink: "#0B0F19",
+        surface: "#111625",
+        card: "#172033",
+        border: "#222D47",
         gold: "#D4AF37",
         blue: {
-          DEFAULT: "#2F6FED",
-          light: "#5B8DFF",
+          DEFAULT: "#4682B4", // Steel Blue
+          light: "#639ecb",
         },
       },
       fontFamily: {
