@@ -86,13 +86,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/dashboard" className="font-display text-lg font-bold">
           KURUXETRA<span className="text-gold">.</span>
         </Link>
-        <button
-          onClick={() => setMenuOpen((prev) => !prev)}
-          className="btn-primary text-xs px-3 py-2"
-          type="button"
-        >
-          {menuOpen ? "Close" : "Menu"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={toggleTheme} className="text-xs text-gold border border-gold/15 bg-gold/5 px-2.5 py-1 rounded-lg font-medium" type="button">
+            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+          </button>
+          <button
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="btn-primary text-xs px-3 py-2"
+            type="button"
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
+        </div>
       </header>
 
       <aside
@@ -100,6 +105,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           menuOpen ? "block absolute inset-x-0 top-16 z-20 border-b border-border" : "hidden"
         } md:block`}
       >
+        <div className="hidden md:flex items-center justify-between mb-6 pb-4 border-b border-border">
+          <Link href="/dashboard" className="font-display text-lg font-bold">
+            KURUXETRA<span className="text-gold">.</span>
+          </Link>
+          <button onClick={toggleTheme} className="text-xs text-gold border border-gold/15 bg-gold/5 px-2.5 py-1 rounded-lg font-medium" type="button">
+            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+          </button>
+        </div>
+
         <nav className="flex-1 space-y-1">
           {nav.map((item) => (
             <Link
@@ -119,9 +133,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex justify-between items-center mt-3">
             <button onClick={logout} className="text-xs text-red-400 hover:text-red-300" type="button">
               Log out
-            </button>
-            <button onClick={toggleTheme} className="text-xs text-gold hover:text-gold/80 flex items-center gap-1" type="button">
-              {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
             </button>
           </div>
         </div>
