@@ -131,7 +131,7 @@ export default function AttendancePage() {
                 await api("/api/attendance/clear", { method: "POST" });
                 await load();
               }}
-              className="text-xs px-3 py-1.5 bg-red-600/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-600/30 transition-all"
+              className="text-xs px-3.5 py-2 bg-transparent hover:bg-red-500/10 text-red-400 border border-red-500/40 rounded-lg font-semibold transition-all duration-200"
             >
               Clear Attendance
             </button>
@@ -140,7 +140,7 @@ export default function AttendancePage() {
                 await api("/api/attendance/restore", { method: "POST" });
                 await load();
               }}
-              className="text-xs px-3 py-1.5 bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all"
+              className="text-xs px-3.5 py-2 bg-transparent hover:bg-gold/10 text-gold border border-gold/40 rounded-lg font-semibold transition-all duration-200"
             >
               Restore Attendance
             </button>
